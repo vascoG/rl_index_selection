@@ -1,0 +1,100 @@
+v0.6.1 (2024-02-17)
+
+- build-egen automatically use `pg_conf --libdir` for additional ld flags if
+  pg_config is detected
+- Continue successfully if postgresql database already exists instead of
+  failing
+- Use linuxdeploy to create AppImage
+- Build gnuplot explicitly disabling unnecessary options for AppImage
+- BDR aware PostgreSQL database loading scripts
+
+v0.6.0 (2024-02-08)
+
+- Minor cosmetic corrections in report
+- Update AppImage to include touchstone-tools v0.7.3
+- Update "run" script with consistent use of --tpcetools flag with other
+  scripts
+
+v0.5.2 (2024-01-24)
+
+- Add pgsql-plans script to capture query explain plans for PostgreSQL
+- build-egen automatically includes pg_conf --includedir if pg_config is
+  detected
+
+v0.5.1 (2024-01-22)
+
+- Fix duplicate index name mix_time_txn_start in post-process
+- Fix "run" script handling of waiting for DriverMain to exit
+- Simplify "run" script progress output
+
+v0.5.0 (2024-01-08)
+
+- pgsql: update flat file loading to TRUNCATE the table and set FREEZE to true
+  in the COPY command to improve its performance
+- pgsql: remove trade order frame 3 pl/pgsql dirty hack and increase the size
+  of S_PRICE_T to NUMERIC(12, 2) from NUMERIC(8, 2)
+- Fix execution of post-process from "run" script to use correct customers
+  value
+- Fix check for rst2html5 in "report" script
+- pgsql: refactor DBConnection exec() function to not throw an error for
+  successfully SELECT statements that return zero rows
+- pgsql: refactor Market Feed transaction to be spec compliant
+
+v0.4.0 (2024-01-04)
+
+- Update PostgreSQL schema definitions to v1.14.0 spec
+- Fix "build" script to set number of instance customers correctly with
+  respective database build scripts
+- Fix egen-1.14-warnings patch's EGen MaxRecordIdx() to use int
+- TestTxn: Clear data structures before executing transactions
+- pgsql: check-db script now runs consistency tests tests and calculates
+  expected table cardinalities
+- pgsql: build-db default to use FLAT instead of CUSTOM
+- pgsql: fix trade lookup frame 4 pl/pgsql stored function
+- pgsql: fix trade order frame 3 pl/pgsql stored function
+- Fix verbose output of trade lookup, trade order, and trade update
+  transactions
+- pgsql: fix trade result frame 3 pl/pgsql assignment of tax_amount
+- pgsql: fix market feed frame 1 pl/plgsql assignment of num_updated and
+  current timestamp
+- pgsql: fix trade update frame 3 pl/pgsql assignment of num_updated
+- pgsql: add dirty hack to trade order frame 3 pg/pgsql to handle S_PRICE_T
+  overflow
+- pgsql: fix trade cleanup pl/pgsql assignment of current timestamp
+
+v0.3.0 (2023-12-15)
+
+- Add verbose flag (-v) to BrokerageHouseMain to output frame inputs/outputs
+- Add -U flag to pgsql-build-db to enable database creation by privileged
+  operating system user
+- Add high level database "build" script
+- pgsql: update custom loading header files to TRUNCATE the table and set
+  FREEZE to true in the COPY command to improve its performance
+- Fix memory clearing in TPC-E Tools bugs introduced by warnings patch
+- Log when driver threads terminate to better calculate steady state duration
+- Refactor and rename generate-report to simply "report" as a POSIX shell
+  script that can create reStructuredText, HTML and PDF reports
+
+v0.2.0 (2023-12-07)
+
+- Fix transaction rate calculation
+- Fix various scripting bugs
+- Replace libpqxx code with libpq code
+- Fix PostgreSQL stored procedure bugs
+- Fix egen compiler warnings
+- Update cmake files, add CPack rule to create source packages
+- Add Docker scripts to build database
+- Update PostgreSQL build script set vacuum parallelism based on available
+  processors and to perform a regular vacuum, instead of a full vacuum
+- Removed TPC-E Tools code per TPC EULA
+- Add build-egen script to build TPC-E Tools with sponsored code
+- Updated for TPC-E Tools v1.14.0
+- Refactor post-processing script to use sqlite
+- Add scripts to create an AppImage
+- Convert README files to ReStructuredText
+- psql: issue rollback when CustomerPosition, MarketFeed, and TradeResult
+  transactions don't run all frames due to invalid results
+
+v0.1.0 (2010-04-10)
+
+- Initial release, currently only for PostgreSQL and TPC-E Tools v1.10.0

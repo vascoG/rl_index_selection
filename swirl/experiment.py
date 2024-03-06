@@ -23,7 +23,7 @@ from .workload_generator import WorkloadGenerator
 
 
 class Experiment(object):
-    def __init__(self, configuration_file):
+    def __init__(self, configuration_file, loading_model=False):
         self._init_times()
 
         cp = ConfigurationParser(configuration_file)
@@ -47,7 +47,16 @@ class Experiment(object):
         self.evaluated_workloads_strs = []
 
         self.EXPERIMENT_RESULT_PATH = self.config["result_path"]
-        self._create_experiment_folder()
+        if not loading_model:
+            self._create_experiment_folder()
+        else:
+            self.experiment_folder_path = f"{self.EXPERIMENT_RESULT_PATH}/ID_{self.id}"
+
+
+    def load_model(self, algorithm_class, training_env):
+        logging.info(f"Loading model from {self.experiment_folder_path}/final_model.zip")
+        logging.info(f"Algorithm class: {algorithm_class}")
+        return algorithm_class.load(f"{self.experiment_folder_path}/final_model.zip", env=training_env)
 
     def prepare(self):
         self.schema = Schema(
@@ -249,7 +258,7 @@ class Experiment(object):
             f.write("\n")
 
             f.write(f"Start:                         {self.start_time}\n")
-            f.write(f"End:                           {self.start_time}\n")
+            f.write(f"End:                           {self.end_time}\n")
             f.write(f"Duration:                      {self.end_time - self.start_time}\n")
             f.write("\n")
             f.write(f"Start Training:                {self.training_start_time}\n")
@@ -558,7 +567,23 @@ class Experiment(object):
                         db2advis_algorithm.final_cost_proportion
                     )
 
-                    self.evaluated_workloads_strs.append(f"{model_performance['evaluated_workload']}\n")
+                    self.evaluated_workloads_strs.append(f"{model_performance['evaluated_workload']}\n"f"{indexes}\n")
+
+    def suggest_indexes(self, model):
+        # choose one workload to suggest indexes for (randomly)
+        test_wl = self.rnd.choice(self.rnd.choice(self.workload_generator.wl_testing))
+
+        test_env = self.DummyVecEnv([self.make_env(0, EnvironmentType.TESTING, [test_wl])])
+        test_env = self.VecNormalize(
+            test_env, norm_obs=True, norm_reward=False, gamma=self.config["rl_algorithm"]["gamma"], training=False
+        )
+
+        if model != self.model:
+            model.set_env(self.model.env)
+
+        model_performance = self._evaluate_model(model, test_env, 1)
+        return model_performance
+
 
     # todo: code duplication with validate_model
     def test_model(self, model):

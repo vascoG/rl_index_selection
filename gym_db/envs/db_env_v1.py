@@ -119,7 +119,7 @@ class DBEnvV1(gym.Env):
             f"Evaluated Workload ({self.environment_type}): {self.current_workload}\n    "
             f"Initial cost: {self.initial_costs:,.2f}, now: {self.current_costs:,.2f} "
             f"({episode_performance['achieved_cost']:.2f}). Reward: {self.reward_calculator.accumulated_reward}.\n    "
-            f"Size: {b_to_mb(self.current_storage_consumption):.2f} with {len(self.current_indexes)} indexes:\n    "
+            f"Size: {b_to_mb(self.current_storage_consumption):.2f}MB with {len(self.current_indexes)} indexes:\n    "
             f"{self.current_indexes}\n    "
         )
         logging.warning(output)

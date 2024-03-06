@@ -1,0 +1,268 @@
+#!/bin/sh
+@SHELLOPTIONS@
+#
+# This file is released under the terms of the Artistic License.
+# Please see the file LICENSE, included in this package, for details.
+#
+# Copyright The DBT-5 Authors
+#
+
+usage()
+{
+	echo "Usage:"
+	echo "    $0 [option]"
+	echo "    $0 -h"
+	echo "Options:"
+	echo "    -b <integer>"
+	echo "        Beginning customer ordinal position"
+	echo "    -c <integer>"
+	echo "        Number of customers for this instance"
+	echo "    -d <dbname>"
+	echo "        PGDATABASE name, default ${DBT5DBNAME}"
+	echo "    -h"
+	echo "        this help"
+	echo "    -i <path>"
+	echo "        Path to EGen"
+	echo "    -l <port>"
+	echo "        database port"
+	echo "    -p <database_parameters>"
+	echo "        PostgreSQL database parameters"
+	echo "    -r"
+	echo "        Drop existing database before building a new database"
+	echo "    -s <scale factor>"
+	echo "        Scale factor (customers per 1 trtps)"
+	echo "    -t <integer>"
+	echo "        Number of customers (total)"
+	echo "    -u"
+	echo "        Use tablespaces"
+	echo "    -w <days>"
+	echo "        Initial trade days (business days) to populate" 
+}
+
+load_table()
+{
+	eval "${PSQL}" -e <<- EOF
+		BEGIN;
+		TRUNCATE ${1};
+		COPY ${1} FROM '${EGENDIR}/flat_out/${2}'
+		WITH (DELIMITER '|', FREEZE TRUE, NULL '');
+		COMMIT;
+	EOF
+}
+
+MODE="FLAT"
+REBUILD_DB=0
+PRIVILEGED=0
+
+# These are minimum values defined by the specification.
+CUSTOMERS_INSTANCE=5000
+CUSTOMERS_TOTAL=5000
+DBT5DBNAME="dbt5"
+SCALE_FACTOR=500
+STARTING_CUSTOMER_ID=1
+ITD=300
+
+while getopts "b:c:d:hi:l:p:rs:t:Uuw:" OPT; do
+	case ${OPT} in
+	b)
+		STARTING_CUSTOMER_ID=${OPTARG}
+		;;
+	c)
+		CUSTOMERS_INSTANCE=${OPTARG}
+		;;
+	d)
+		DBT5DBNAME=${OPTARG}
+		;;
+	i)
+		EGENDIR=$(realpath "${OPTARG}")
+		;;
+	h)
+		usage
+		exit 0
+		;;
+	l)
+		PORT=${OPTARG}
+		;;
+	p)
+		PARAMETERS=${OPTARG}
+		;;
+	r)
+		REBUILD_DB=1
+		;;
+	s)
+		SCALE_FACTOR=${OPTARG}
+		;;
+	t)
+		CUSTOMERS_TOTAL=${OPTARG}
+		;;
+	u)
+		TABLESPACES_FLAG="-t"
+		;;
+	U)
+		PRIVILEGED=1
+		;;
+	w)
+		ITD=${OPTARG}
+		;;
+	esac
+done
+
+if [ $# -eq 0 ]; then
+	usage
+	exit 1
+fi
+
+if [ "x${EGENDIR}" = "x" ]; then
+	echo "EGENDIR not defined, specify EGen's directory."
+	exit 1
+else
+	EGENLOADER="${EGENDIR}/bin/EGenLoader"
+	if [ ! -f ${EGENLOADER} ]; then
+		echo "Cannot verify that '${EGENLOADER}' exists..."
+		exit 1
+	fi
+fi
+
+if [ ! "x${DBT5DBNAME}" = "x" ]; then
+	DBNAMEARG="-d ${DBT5DBNAME}"
+	export PGDATABASE="${DBT5DBNAME}"
+fi
+
+if [ ! "x${PORT}" = "x" ]; then
+	PORTARG="-p ${PORT}"
+	export PGPORT="${PORT}"
+fi
+
+PSQL="psql -X ${PORTARG} ${DBNAMEARG}"
+
+if [ ${PRIVILEGED} -eq 1 ] && [ ${REBUILD_DB} -eq 1 ]; then
+	echo "Restarting the database to reset database parameters..."
+	dbt5-pgsql-stop-db
+	dbt5-pgsql-start-db -p "${PARAMETERS}" || exit 1
+	eval dbt5-pgsql-drop-db ${PORTARG}
+fi
+
+eval "dbt5-pgsql-create-db ${DBNAMEARG} ${PORTARG}" || exit 1
+
+if [ ${PRIVILEGED} -eq 1 ]; then
+	#
+	# Stop and restart the database so we get the parameters we want when we
+	# start loading the database.
+	#
+	dbt5-pgsql-stop-db
+	dbt5-pgsql-start-db -p "${PARAMETERS}" || exit 1
+fi
+
+# FIXME: Find a way to pass arguments to psql using EGen's -p flag, which
+# apparently doesn't like arguments to have dashes (-) in them.
+eval "dbt5-pgsql-create-tables ${PORTARG} ${TABLESPACES_FLAG}" || exit 1
+if [ "${MODE}" = "CUSTOM" ]; then
+	${EGENLOADER} \
+			-i ${EGENDIR}/flat_in \
+			-b ${STARTING_CUSTOMER_ID} \
+			-l ${MODE} \
+			-f ${SCALE_FACTOR} \
+			-w ${ITD} \
+			-c ${CUSTOMERS_INSTANCE} \
+			-t ${CUSTOMERS_TOTAL} || exit 1
+elif [ "${MODE}" = "FLAT" ]; then
+	${EGENLOADER} \
+			-i ${EGENDIR}/flat_in \
+			-o ${EGENDIR}/flat_out \
+			-b ${STARTING_CUSTOMER_ID} \
+			-l ${MODE} \
+			-f ${SCALE_FACTOR} \
+			-w ${ITD} \
+			-c ${CUSTOMERS_INSTANCE} \
+			-t ${CUSTOMERS_TOTAL} || exit 1
+	load_table account_permission AccountPermission.txt &
+	load_table address Address.txt &
+	load_table broker Broker.txt &
+	load_table cash_transaction CashTransaction.txt &
+	load_table charge Charge.txt &
+	load_table commission_rate CommissionRate.txt &
+	load_table company Company.txt &
+	load_table company_competitor CompanyCompetitor.txt &
+	load_table customer Customer.txt &
+	load_table customer_account CustomerAccount.txt &
+	load_table customer_taxrate CustomerTaxrate.txt &
+	load_table daily_market DailyMarket.txt &
+	load_table exchange Exchange.txt &
+	load_table financial Financial.txt &
+	load_table holding_history HoldingHistory.txt &
+	load_table holding_summary HoldingSummary.txt &
+	load_table holding Holding.txt &
+	load_table industry Industry.txt &
+	load_table last_trade LastTrade.txt &
+	load_table news_item NewsItem.txt &
+	load_table news_xref NewsXRef.txt &
+	load_table sector Sector.txt &
+	load_table security Security.txt &
+	load_table settlement Settlement.txt &
+	load_table status_type StatusType.txt &
+	load_table taxrate TaxRate.txt &
+	load_table trade_history TradeHistory.txt &
+	load_table trade Trade.txt &
+	load_table trade_type TradeType.txt &
+	load_table watch_item WatchItem.txt &
+	load_table watch_list WatchList.txt &
+	load_table zip_code ZipCode.txt &
+	wait
+else
+	echo "ERROR: unknown load type: ${MODE}"
+	exit 1
+fi
+ROWCOUNT="$(eval "${PSQL} -At" <<- EOF
+	SELECT 1
+	FROM pg_proc, pg_namespace
+	WHERE pg_proc.pronamespace = pg_namespace.oid
+	  AND nspname = 'bdr'
+	  AND proname = 'wait_slot_confirm_lsn'
+	LIMIT 1;
+EOF
+)"
+if [ "${ROWCOUNT}" = "1" ]; then
+	eval "${PSQL} -e" <<- EOF
+		SELECT bdr.wait_slot_confirm_lsn(NULL, NULL);
+	EOF
+fi
+eval "dbt5-pgsql-create-indexes ${PORTARG} ${TABLESPACES_FLAG}" || exit 1
+eval "dbt5-pgsql-load-stored-procs ${PORTARG}" || exit 1
+eval "${PSQL} -e -c \"SELECT setseed(0);\"" || exit 1
+
+# Set the number of vacuumdb jobs to 1 (no parallelism) and let see
+# if the system can support a greater value.
+VACUUM_JOBS=1
+# Based on server version, enable vaccumdb parallelism if that version
+# is greater than or equal to 9.5.
+PG_VERSION_NUM=$(eval "psql -X -At ${DBNAMEARG} -c \"SHOW server_version_num\"")
+PG_VERSION_NUM=$(( $PG_VERSION_NUM + 0 ))
+if [ $PG_VERSION_NUM -ge 95000 ]; then
+	# Set default vacuum jobs to 33 because this is the number of tables
+	# present in the database. Setting the number of job to a value
+	# greater than 9 won't bring any additional benefit.
+	VACUUM_JOBS=33
+	# If the number of CPUs is less than 9, then we set the vacuum job
+	# number to that number of CPUs.
+	if [ -f "/proc/stat" ]; then
+		CPUS=$(grep cpu /proc/stat | wc -l)
+		CPUS=$(( $CPUS - 1 ))
+		if [ $CPUS -lt $VACUUM_JOBS ]; then
+			VACUUM_JOBS=$CPUS
+		fi
+	fi
+fi
+
+# VACUUM FULL ANALYZE: Build optimizer statistics for newly-created tables. A
+# VACUUM FULL is probably unnecessary; we want to scan the heap and update the
+# commit-hint bits on each new tuple, but a regular VACUUM ought to suffice for
+# that.
+
+VACUUM_OPTS="-z -F"
+
+# Use vacuumdb's -j option only if VACUUM_JOBS is greater than 1.
+if [ $VACUUM_JOBS -gt 1 ]; then
+	VACUUM_OPTS+=" -j $VACUUM_JOBS"
+fi
+
+eval "vacuumdb $PORTARG $VACUUM_OPTS -d $DBT5DBNAME" || exit 1

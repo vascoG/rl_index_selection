@@ -10,3 +10,4 @@ psycopg2-binary==2.8.6
 sklearn==0.0
 tensorboard==1.15.0
 tensorflow==1.15.0
+protobuf==3.20.*
