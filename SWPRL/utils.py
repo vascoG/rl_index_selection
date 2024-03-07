@@ -49,15 +49,18 @@ def predict_partitions_sizes(columns, database_name):
 
         connector.get_column_statistics(potential_partition.column)
 
-        cost_evaluation.what_if.simulate_partition(potential_partition, True)
+        potential_partition.estimated_size = 0
 
-        full_partition_size = potential_partition.estimated_size
+        # cost_evaluation.what_if.simulate_partition(potential_partition, True)
 
-        if full_partition_size >= 0:
-            predicted_partitions_sizes.append(full_partition_size)
-            cost_evaluation.what_if.drop_simulated_partition(potential_partition)
+        # full_partition_size = potential_partition.estimated_size
 
-        parent_partitions_size_map[column] = full_partition_size
+        # if full_partition_size >= 0:
+        #     predicted_partitions_sizes.append(full_partition_size)
+        #     cost_evaluation.what_if.drop_simulated_partition(potential_partition)
+
+        # parent_partitions_size_map[column] = full_partition_size
+        parent_partitions_size_map[column] = 0
 
     return predicted_partitions_sizes
 

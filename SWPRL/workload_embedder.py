@@ -3,7 +3,7 @@ import logging
 import gensim
 from sklearn.decomposition import PCA
 
-from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
+from SWPRL.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.index import Index
 from index_selection_evaluation.selection.workload import Query
 from SWPRL.partition import Partition
@@ -44,6 +44,18 @@ class WorkloadEmbedder(object):
         self.database_connector = database_connector
         self.plans = None
         self.columns = columns
+        self.columns_by_table = []
+
+        for column in columns:
+            found = False
+            for table in self.columns_by_table:
+                if column.table == table[0].table:
+                    table.append(column)
+                    found = True
+                    break
+            if not found:
+                self.columns_by_table.append([column])
+
 
         if retrieve_plans:
             cost_evaluation = CostEvaluation(self.database_connector)
@@ -58,26 +70,34 @@ class WorkloadEmbedder(object):
             logging.critical(f"Creating all partitions of width 1.")
 
             created_partitions = 0
+        
             while created_partitions < len(self.columns):
+                logging.info(f"Created partitions: {created_partitions}")
                 potential_partitions = []
-                for i in range(self.PARTITIONS_SIMULATED_IN_PARALLEL):
-                    potential_partition = Partition(self.columns[created_partitions])
-                    cost_evaluation.what_if.simulate_index(potential_partition, True) # TODO: simulate partitions
+                i = 0
+                logging.info(f"i: {i}")
+                for table in self.columns_by_table:
+                    if i >= len(table):
+                        continue 
+
+                    potential_partition = Partition(table[i])
+                    cost_evaluation.what_if.simulate_partition(potential_partition, True) 
                     potential_partitions.append(potential_partition)
                     created_partitions += 1
-                    if created_partitions == len(self.columns):
-                        break
+
+                i+=1
 
                 for query_idx, query_texts_per_query_class in enumerate(query_texts):
                     query_text = query_texts_per_query_class[0]
                     query = Query(query_idx, query_text)
                     plan = self.database_connector.get_plan(query)
+                    logging.info(plan)
                     self.plans[1].append(plan)
 
                 for potential_partition in potential_partitions:
-                    cost_evaluation.what_if.drop_simulated_index(potential_index) # TODO: drop simulated partitions
+                    cost_evaluation.what_if.drop_simulated_partition(potential_partition)
 
-                logging.critical(f"Finished checking {created_partitions} partitions.")
+            logging.critical(f"Finished checking {created_partitions} partitions.")
 
         self.database_connector = None
 
