@@ -10,8 +10,8 @@ class BagOfOperators(object):
             "Seq Scan",
             "Hash Join",
             "Nested Loop",
-            #"Index Only Scan",
-            #"Index Scan",
+            "Index Only Scan",
+            "Index Scan",
             "Merge Join",
             "Sort",
         ]
@@ -96,26 +96,26 @@ class BagOfOperators(object):
 
         return node_representation
 
-    # def _parse_index_scan(self, node):
-    #     assert "Relation Name" in node
+    def _parse_index_scan(self, node):
+        assert "Relation Name" in node
 
-    #     node_representation = ""
-    #     node_representation += f"{node['Relation Name']}_"
+        node_representation = ""
+        node_representation += f"{node['Relation Name']}_"
 
-    #     node_representation += self._stringify_attribute_columns(node, "Filter")
-    #     node_representation += self._stringify_attribute_columns(node, "Index Cond")
+        node_representation += self._stringify_attribute_columns(node, "Filter")
+        node_representation += self._stringify_attribute_columns(node, "Index Cond")
 
-    #     return node_representation
+        return node_representation
 
-    # def _parse_index_only_scan(self, node):
-    #     assert "Relation Name" in node
+    def _parse_index_only_scan(self, node):
+        assert "Relation Name" in node
 
-    #     node_representation = ""
-    #     node_representation += f"{node['Relation Name']}_"
+        node_representation = ""
+        node_representation += f"{node['Relation Name']}_"
 
-    #     node_representation += self._stringify_attribute_columns(node, "Index Cond")
+        node_representation += self._stringify_attribute_columns(node, "Index Cond")
 
-    #     return node_representation
+        return node_representation
 
     def _parse_nested_loop(self, node):
         node_representation = ""
@@ -151,10 +151,10 @@ class BagOfOperators(object):
 
         if node["Node Type"] == "Seq Scan":
             node_representation += f"{self._parse_seq_scan(node)}"
-        # elif node["Node Type"] == "Index Only Scan":
-        #     node_representation += f"{self._parse_index_only_scan(node)}"
-        # elif node["Node Type"] == "Index Scan":
-        #     node_representation += f"{self._parse_index_scan(node)}"
+        elif node["Node Type"] == "Index Only Scan":
+            node_representation += f"{self._parse_index_only_scan(node)}"
+        elif node["Node Type"] == "Index Scan":
+            node_representation += f"{self._parse_index_scan(node)}"
         elif node["Node Type"] == "Nested Loop":
             node_representation += f"{self._parse_nested_loop(node)}"
         elif node["Node Type"] == "Hash Join":

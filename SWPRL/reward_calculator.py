@@ -1,4 +1,5 @@
 from index_selection_evaluation.selection.utils import b_to_mb
+import logging
 
 
 class RewardCalculator(object):
@@ -63,7 +64,8 @@ class RelativeDifferenceRelativeToStorageReward(RewardCalculator):
         self.SCALER = 1
 
     def _calculate_reward(self, current_cost, previous_cost, initial_cost, new_partition_size):
-        assert new_partition_size > 0
+        logging.info("current_cost: %s, previous_cost: %s, initial_cost: %s, new_partition_size: %s")
+        assert new_partition_size >= 0
 
         reward = ((previous_cost - current_cost) / initial_cost) / b_to_mb(new_partition_size) * self.SCALER
 

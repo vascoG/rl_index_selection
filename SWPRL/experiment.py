@@ -36,11 +36,11 @@ class Experiment(object):
         self.rnd = random.Random()
         self.rnd.seed(self.config["random_seed"])
 
-        # self.comparison_performances = {
-        #     "test": {"Extend": [], "DB2Adv": []},
-        #     "validation": {"Extend": [], "DB2Adv": []},
-        # }
-        # self.comparison_indexes = {"Extend": set(), "DB2Adv": set()}
+        self.comparison_performances = {
+            "test": {"Extend": [], "DB2Adv": []},
+            "validation": {"Extend": [], "DB2Adv": []},
+        }
+        self.comparison_indexes = {"Extend": set(), "DB2Adv": set()}
 
         self.number_of_features = None
         self.number_of_actions = None
@@ -635,7 +635,7 @@ class Experiment(object):
     def make_env(self, env_id, environment_type=EnvironmentType.TRAINING, workloads_in=None):
         def _init():
             action_manager_class = getattr(
-                importlib.import_module("swirl.action_manager"), self.config["action_manager"]
+                importlib.import_module("SWPRL.action_manager"), self.config["action_manager"]
             )
             action_manager = action_manager_class(
                 partitionable_columns=self.globally_partitionable_columns,
@@ -652,7 +652,7 @@ class Experiment(object):
                 "workload_size": self.config["workload"]["size"],
             }
             observation_manager_class = getattr(
-                importlib.import_module("swirl.observation_manager"), self.config["observation_manager"]
+                importlib.import_module("SWPRL.observation_manager"), self.config["observation_manager"]
             )
             observation_manager = observation_manager_class(
                 action_manager.number_of_columns, observation_manager_config
@@ -662,7 +662,7 @@ class Experiment(object):
                 self.number_of_features = observation_manager.number_of_features
 
             reward_calculator_class = getattr(
-                importlib.import_module("swirl.reward_calculator"), self.config["reward_calculator"]
+                importlib.import_module("SWPRL.reward_calculator"), self.config["reward_calculator"]
             )
             reward_calculator = reward_calculator_class()
 

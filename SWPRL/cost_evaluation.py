@@ -194,6 +194,6 @@ class CostEvaluation:
     @staticmethod
     def _relevant_partitions(query, partitions):
         relevant_partitions = [
-            x for x in partitions if any(c in query.columns for c in x.columns)
+            x.column for x in partitions
         ]
         return frozenset(relevant_partitions)

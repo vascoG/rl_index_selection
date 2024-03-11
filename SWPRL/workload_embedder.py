@@ -70,11 +70,10 @@ class WorkloadEmbedder(object):
             logging.critical(f"Creating all partitions of width 1.")
 
             created_partitions = 0
-        
+            i = 0
             while created_partitions < len(self.columns):
                 logging.info(f"Created partitions: {created_partitions}")
                 potential_partitions = []
-                i = 0
                 logging.info(f"i: {i}")
                 for table in self.columns_by_table:
                     if i >= len(table):
@@ -91,7 +90,6 @@ class WorkloadEmbedder(object):
                     query_text = query_texts_per_query_class[0]
                     query = Query(query_idx, query_text)
                     plan = self.database_connector.get_plan(query)
-                    logging.info(plan)
                     self.plans[1].append(plan)
 
                 for potential_partition in potential_partitions:

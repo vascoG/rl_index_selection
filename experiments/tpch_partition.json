@@ -1,14 +1,14 @@
 {
   "id": "Partition_Vasco_TPCH_Test_Experiment_Factor_1",
   "description": "Partition Just a TPCH Test Experiment from Vascos",
-  "gym_version": 1,
+  "gym_version": 2,
   "timesteps": 20000,
   "random_seed": 60,
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,
-  "action_manager": "MultiColumnIndexActionManager",
+  "action_manager": "PartitionActionManager",
   "observation_manager": "PartitionPlanEmbeddingObservationManagerWithCost",
-  "reward_calculator": "RelativeDifferenceRelativeToStorageReward",
+  "reward_calculator": "AbsoluteDifferenceToPreviousReward",
   "max_steps_per_episode": 2,
   "validation_frequency": 1000,
   "result_path": "experiment_results",
@@ -36,7 +36,7 @@
   "workload": {
     "benchmark": "TPCH",
     "scale_factor": 1,
-    "size": 18,
+    "size": 19,
     "varying_frequencies": true,
     "training_instances": 5000,
     "validation_testing": {
@@ -44,10 +44,10 @@
       "unknown_query_probabilities": [0.5]
     },
     "similar_workloads": false,
-    "excluded_query_classes": [1,2,17,20],
+    "excluded_query_classes": [1,17,20],
     "unknown_queries": 0
   },
-  "comparison_algorithms": ["db2advis"],
+  "comparison_algorithms": [],
   "budgets": {
     "training": false,
     "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]

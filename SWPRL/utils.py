@@ -1,4 +1,5 @@
 import itertools
+import random
 
 from SWPRL.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
@@ -49,18 +50,17 @@ def predict_partitions_sizes(columns, database_name):
 
         connector.get_column_statistics(potential_partition.column)
 
-        potential_partition.estimated_size = 0
+        potential_partition.estimated_size = random.randint(1, 1000) # random number for now
 
         # cost_evaluation.what_if.simulate_partition(potential_partition, True)
 
-        # full_partition_size = potential_partition.estimated_size
+        full_partition_size = potential_partition.estimated_size
 
         # if full_partition_size >= 0:
-        #     predicted_partitions_sizes.append(full_partition_size)
+        predicted_partitions_sizes.append(full_partition_size)
         #     cost_evaluation.what_if.drop_simulated_partition(potential_partition)
 
-        # parent_partitions_size_map[column] = full_partition_size
-        parent_partitions_size_map[column] = 0
+        parent_partitions_size_map[column] = full_partition_size
 
     return predicted_partitions_sizes
 

@@ -46,10 +46,6 @@ def load_and_run():
     )
 
     experiment.model_type = algorithm_class
-
-    with open(f"{experiment.experiment_folder_path}/experiment_object.pickle", "wb") as handle:
-        pickle.dump(experiment, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     
     model = experiment.load_model(algorithm_class, training_env)
 

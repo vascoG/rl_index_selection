@@ -53,6 +53,9 @@ class WorkloadGenerator(object):
 
         self.globally_partitionable_columns = self._select_partitionable_columns()
 
+        size = sum([len(table.columns) for table in workload_tables])
+        logging.info(f"Globally partitionable columns (size: {size}) - {self.globally_partitionable_columns}")
+
         validation_instances = config["validation_testing"]["number_of_workloads"]
         test_instances = config["validation_testing"]["number_of_workloads"]
         self.wl_validation = []
@@ -404,6 +407,7 @@ class WorkloadGenerator(object):
 
     def _select_partitionable_columns(self):
         available_query_classes = tuple(self.available_query_classes)
+        logging.info(f"Available query classes: {self.available_query_classes}")
         query_class_frequencies = tuple([1 for frequency in range(len(available_query_classes))])
 
         logging.info(f"Selecting partitionable columns on {len(available_query_classes)} query classes.")

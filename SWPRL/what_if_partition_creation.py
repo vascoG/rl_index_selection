@@ -20,6 +20,7 @@ class WhatIfPartitionCreation:
             potential_partition.estimated_size = -1
             return
         if minimum == median or maximum == median:
+            logging.info(f"This partition has no variance: {potential_partition.column}")
             potential_partition.estimated_size = -1
             return
         
@@ -45,7 +46,7 @@ class WhatIfPartitionCreation:
         if not result:
             return -1
 
-        #assert result > 0, "Hypothetical partition does not exist." # TODO: Why is this always 0?
+        #assert result > 0, "Hypothetical partition does not exist." # TODO: Uncomment this if I ever implement partition size estimation
         return result[0]
 
     def drop_all_simulated_partitions(self):

@@ -85,7 +85,7 @@ class ActionManager(object):
         raise NotImplementedError
 
 
-class MultiColumnIndexActionManager(ActionManager):
+class PartitionActionManager(ActionManager):
     def __init__(
         self, partitionable_columns, action_storage_consumptions, sb_version
     ):
@@ -108,18 +108,20 @@ class MultiColumnIndexActionManager(ActionManager):
                 self.column_to_idx_table[column] = idx
 
         self.column_to_idx = {}
-        for table in partitionable_columns
+        for table in partitionable_columns:
             for idx, column in enumerate(table):
-            self.column_to_idx[column] = idx
+                self.column_to_idx[column] = idx
 
     def _valid_actions_based_on_last_action(self, last_action):
 
         last_column = self.partitionable_columns_flat[last_action]
         last_table = self.column_to_idx_table[last_column]
 
-        for column_idx in copy.copy(self._remaining_valid_actions):
-            table = self.column_to_idx_table[column]
+        logging.info(f"Last action: {last_action}, last column: {last_column}, last table: {last_table}")
 
+        for column_idx in copy.copy(self._remaining_valid_actions):
+            column = self.partitionable_columns_flat[column_idx]
+            table = self.column_to_idx_table[column]
             if table == last_table:
                 self.valid_actions[column_idx] = self.FORBIDDEN_ACTION
                 self._remaining_valid_actions.remove(column_idx)

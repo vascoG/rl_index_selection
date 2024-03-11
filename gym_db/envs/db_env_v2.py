@@ -6,7 +6,7 @@ import random
 import gym
 
 from gym_db.common import EnvironmentType
-from index_selection_evaluation.selection.cost_evaluation import CostEvaluation
+from SWPRL.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
 from SWPRL.partition import Partition
 from index_selection_evaluation.selection.utils import b_to_mb
@@ -90,7 +90,7 @@ class DBEnvV2(gym.Env):
         if episode_done and self.environment_type != EnvironmentType.TRAINING:
             self._report_episode_performance(environment_state)
             self.current_workload_idx += 1
-            # print(f"Indexes: {len(self.current_partitions)}")
+            print(f"Partitions: {self.current_partitions}")
 
         return current_observation, reward, episode_done, {"action_mask": self.valid_actions}
 
