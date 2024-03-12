@@ -1,6 +1,6 @@
 {
-  "id": "Partition_Vasco_TPCH_Test_Experiment_Factor_1",
-  "description": "Partition Just a TPCH Test Experiment from Vascos",
+  "id": "Partition_2_Vasco_TPCH_Test_Experiment_Factor_1",
+  "description": "Partition_2 Just a TPCH Test Experiment from Vascos",
   "gym_version": 2,
   "timesteps": 10000,
   "random_seed": 60,
