@@ -34,35 +34,35 @@ from SWPRL.partition import Partition
 #     return predicted_index_sizes
 
 
-def predict_partitions_sizes(columns, database_name):
-    connector = PostgresDatabaseConnector(database_name, autocommit=True)
-    connector.drop_indexes()
-    # connector.drop_partitions() - there are no partitions in the original databases
+# def predict_partitions_sizes(columns, database_name):
+#     connector = PostgresDatabaseConnector(database_name, autocommit=True)
+#     connector.drop_indexes()
+#     # connector.drop_partitions() - there are no partitions in the original databases
 
-    cost_evaluation = CostEvaluation(connector)
+#     cost_evaluation = CostEvaluation(connector)
 
-    predicted_partitions_sizes = []
+#     predicted_partitions_sizes = []
 
-    parent_partitions_size_map = {}
+#     parent_partitions_size_map = {}
 
-    for column in columns:
-        potential_partition = Partition(column)
+#     for column in columns:
+#         potential_partition = Partition(column)
 
-        connector.get_column_statistics(potential_partition.column)
+#         connector.get_column_statistics(potential_partition.column)
 
-        potential_partition.estimated_size = random.randint(1, 1000) # random number for now
+#         potential_partition.estimated_size = random.randint(1, 1000) # random number for now
 
-        # cost_evaluation.what_if.simulate_partition(potential_partition, True)
+#         # cost_evaluation.what_if.simulate_partition(potential_partition, True)
 
-        full_partition_size = potential_partition.estimated_size
+#         full_partition_size = potential_partition.estimated_size
 
-        # if full_partition_size >= 0:
-        predicted_partitions_sizes.append(full_partition_size)
-        #     cost_evaluation.what_if.drop_simulated_partition(potential_partition)
+#         # if full_partition_size >= 0:
+#         predicted_partitions_sizes.append(full_partition_size)
+#         #     cost_evaluation.what_if.drop_simulated_partition(potential_partition)
 
-        parent_partitions_size_map[column] = full_partition_size
+#         parent_partitions_size_map[column] = full_partition_size
 
-    return predicted_partitions_sizes
+#     return predicted_partitions_sizes
 
 # def create_column_permutation_indexes(columns, max_index_width):
 #     result_column_combinations = []

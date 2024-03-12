@@ -80,7 +80,7 @@ class WorkloadEmbedder(object):
                         continue 
 
                     potential_partition = Partition(table[i])
-                    cost_evaluation.what_if.simulate_partition(potential_partition, True) 
+                    cost_evaluation.what_if.simulate_partition(potential_partition) 
                     potential_partitions.append(potential_partition)
                     created_partitions += 1
 

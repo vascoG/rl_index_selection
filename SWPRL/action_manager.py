@@ -34,20 +34,19 @@ class ActionManager(object):
     def get_action_space(self):
         return spaces.Discrete(self.number_of_actions)
 
-    def get_initial_valid_actions(self, workload, budget):
+    def get_initial_valid_actions(self, workload):
         self.current_action_status = [0 for action in range(self.number_of_columns)]
 
         self.valid_actions = [self.FORBIDDEN_ACTION for action in range(self.number_of_actions)]
         self._remaining_valid_actions = []
 
         self._valid_actions_based_on_workload(workload)
-        self._valid_actions_based_on_budget(budget, current_storage_consumption=0)
 
         self.current_partitions = set()
 
         return np.array(self.valid_actions)
 
-    def update_valid_actions(self, last_action, budget, current_storage_consumption):
+    def update_valid_actions(self, last_action):
         assert self.partitionable_columns_flat[last_action] not in self.current_partitions
 
 
@@ -59,24 +58,23 @@ class ActionManager(object):
         self._remaining_valid_actions.remove(last_action)
 
         self._valid_actions_based_on_last_action(last_action)
-        self._valid_actions_based_on_budget(budget, current_storage_consumption)
 
         is_valid_action_left = len(self._remaining_valid_actions) > 0
 
         return np.array(self.valid_actions), is_valid_action_left
 
-    def _valid_actions_based_on_budget(self, budget, current_storage_consumption):
-        if budget is None:
-            return
-        else:
-            new_remaining_actions = []
-            for action_idx in self._remaining_valid_actions:
-                if b_to_mb(current_storage_consumption + self.action_storage_consumptions[action_idx]) > budget:
-                    self.valid_actions[action_idx] = self.FORBIDDEN_ACTION
-                else:
-                    new_remaining_actions.append(action_idx)
+    # def _valid_actions_based_on_budget(self, budget, current_storage_consumption):
+    #     if budget is None:
+    #         return
+    #     else:
+    #         new_remaining_actions = []
+    #         for action_idx in self._remaining_valid_actions:
+    #             if b_to_mb(current_storage_consumption + self.action_storage_consumptions[action_idx]) > budget:
+    #                 self.valid_actions[action_idx] = self.FORBIDDEN_ACTION
+    #             else:
+    #                 new_remaining_actions.append(action_idx)
 
-            self._remaining_valid_actions = new_remaining_actions
+    #         self._remaining_valid_actions = new_remaining_actions
 
     def _valid_actions_based_on_workload(self, workload):
         raise NotImplementedError
@@ -87,7 +85,7 @@ class ActionManager(object):
 
 class PartitionActionManager(ActionManager):
     def __init__(
-        self, partitionable_columns, action_storage_consumptions, sb_version
+        self, partitionable_columns, sb_version
     ):
         ActionManager.__init__(self, sb_version)
 
@@ -99,8 +97,6 @@ class PartitionActionManager(ActionManager):
         ]
         self.number_of_actions = len(self.partitionable_columns_flat)
         self.number_of_columns = self.number_of_actions
-
-        self.action_storage_consumptions = action_storage_consumptions
 
         self.column_to_idx_table = {}
         for idx, table in enumerate(self.partitionable_columns):
@@ -116,8 +112,6 @@ class PartitionActionManager(ActionManager):
 
         last_column = self.partitionable_columns_flat[last_action]
         last_table = self.column_to_idx_table[last_column]
-
-        logging.info(f"Last action: {last_action}, last column: {last_column}, last table: {last_table}")
 
         for column_idx in copy.copy(self._remaining_valid_actions):
             column = self.partitionable_columns_flat[column_idx]

@@ -81,7 +81,7 @@ class DBEnvV2(gym.Env):
         current_observation = self.observation_manager.get_observation(environment_state)
 
         self.valid_actions, is_valid_action_left = self.action_manager.update_valid_actions(
-            action, self.current_budget, self.current_storage_consumption
+            action
         )
         episode_done = self.steps_taken >= self.max_steps_per_episode or not is_valid_action_left
 
@@ -97,8 +97,6 @@ class DBEnvV2(gym.Env):
     def _report_episode_performance(self, environment_state):
         episode_performance = {
             "achieved_cost": self.current_costs / self.initial_costs * 100,
-            "memory_consumption": self.current_storage_consumption,
-            "available_budget": self.current_budget,
             "evaluated_workload": self.current_workload,
             "partitions": self.current_partitions,
         }
@@ -107,7 +105,7 @@ class DBEnvV2(gym.Env):
             f"Evaluated Workload ({self.environment_type}): {self.current_workload}\n    "
             f"Initial cost: {self.initial_costs:,.2f}, now: {self.current_costs:,.2f} "
             f"({episode_performance['achieved_cost']:.2f}). Reward: {self.reward_calculator.accumulated_reward}.\n    "
-            f"Size: {b_to_mb(self.current_storage_consumption):.2f}MB with {len(self.current_partitions)} partitions:\n    "
+            f"There are {len(self.current_partitions)} partitions:\n    "
             f"{self.current_partitions}\n    "
         )
         logging.warning(output)
@@ -117,7 +115,6 @@ class DBEnvV2(gym.Env):
     def _init_modifiable_state(self):
         self.current_partitions = set()
         self.steps_taken = 0
-        self.current_storage_consumption = 0
         self.reward_calculator.reset()
 
         if len(self.workloads) == 0:
@@ -132,14 +129,12 @@ class DBEnvV2(gym.Env):
         else:
             self.current_workload = self.workloads[self.current_workload_idx % len(self.workloads)]
 
-        self.current_budget = self.current_workload.budget
         self.previous_cost = None
 
-        self.valid_actions = self.action_manager.get_initial_valid_actions(self.current_workload, self.current_budget)
+        self.valid_actions = self.action_manager.get_initial_valid_actions(self.current_workload)
         environment_state = self._update_return_env_state(init=True)
 
         state_fix_for_episode = {
-            "budget": self.current_budget,
             "workload": self.current_workload,
             "initial_cost": self.initial_costs,
         }
@@ -151,38 +146,22 @@ class DBEnvV2(gym.Env):
 
     def _update_return_env_state(self, init, new_partition=None):
         total_costs, plans_per_query, costs_per_query = self.cost_evaluation.calculate_cost_and_plans(
-            self.current_workload, self.current_partitions, store_size=True
+            self.current_workload, self.current_partitions
         )
 
         if not init:
             self.previous_cost = self.current_costs
-            self.previous_storage_consumption = self.current_storage_consumption
 
         self.current_costs = total_costs
 
         if init:
             self.initial_costs = total_costs
 
-        new_partition_size = None
-
-        if new_partition is not None:
-            new_partition_size = new_partition.estimated_size
-            self.current_storage_consumption += new_partition_size
-
-            if self.current_budget:
-                assert b_to_mb(self.current_storage_consumption) <= self.current_budget, (
-                    "Storage consumption exceeds budget: "
-                    f"{b_to_mb(self.current_storage_consumption)} "
-                    f" > {self.current_budget}"
-                )
-
         environment_state = {
             "action_status": self.action_manager.current_action_status,
-            "current_storage_consumption": self.current_storage_consumption,
             "current_cost": self.current_costs,
             "previous_cost": self.previous_cost,
             "initial_cost": self.initial_costs,
-            "new_partition_size": new_partition_size,
             "plans_per_query": plans_per_query,
             "costs_per_query": costs_per_query,
         }

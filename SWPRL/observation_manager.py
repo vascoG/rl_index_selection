@@ -3,17 +3,12 @@ import logging
 import numpy as np
 from gym import spaces
 
-VERY_HIGH_BUDGET = 100_000_000_000
-
 
 class ObservationManager(object):
     def __init__(self, number_of_actions):
         self.number_of_actions = number_of_actions
 
     def _init_episode(self, state_fix_for_episode):
-        self.episode_budget = state_fix_for_episode["budget"]
-        if self.episode_budget is None:
-            self.episode_budget = VERY_HIGH_BUDGET
 
         self.initial_cost = state_fix_for_episode["initial_cost"]
 
@@ -60,8 +55,6 @@ class EmbeddingObservationManager(ObservationManager):
                 self.representation_size * self.workload_size
             )  # embedding representation for every query in the workload
             + self.workload_size  # The frequencies for every query in the workloads
-            + 1  # The episode's budget
-            + 1  # The current storage consumption
             + 1  # The initial workload cost
             + 1  # The current workload cost
         )
@@ -90,8 +83,6 @@ class EmbeddingObservationManager(ObservationManager):
         observation = np.array(environment_state["action_status"])
         observation = np.append(observation, workload_embedding)
         observation = np.append(observation, self.frequencies)
-        observation = np.append(observation, self.episode_budget)
-        observation = np.append(observation, environment_state["current_storage_consumption"])
         observation = np.append(observation, self.initial_cost)
         observation = np.append(observation, environment_state["current_cost"])
 
@@ -118,8 +109,6 @@ class PartitionPlanEmbeddingObservationManagerWithCost(EmbeddingObservationManag
             )  # embedding representation for every query in the workload
             + self.workload_size  # The costs for every query in the workload
             + self.workload_size  # The frequencies for every query in the workloads
-            + 1  # The episode's budget
-            + 1  # The current storage consumption
             + 1  # The initial workload cost
             + 1  # The current workload cost
         )
@@ -134,8 +123,6 @@ class PartitionPlanEmbeddingObservationManagerWithCost(EmbeddingObservationManag
         observation = np.append(observation, workload_embedding)
         observation = np.append(observation, environment_state["costs_per_query"])
         observation = np.append(observation, self.frequencies)
-        observation = np.append(observation, self.episode_budget)
-        observation = np.append(observation, environment_state["current_storage_consumption"])
         observation = np.append(observation, self.initial_cost)
         observation = np.append(observation, environment_state["current_cost"])
 

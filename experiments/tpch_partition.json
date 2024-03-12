@@ -2,19 +2,19 @@
   "id": "Partition_Vasco_TPCH_Test_Experiment_Factor_1",
   "description": "Partition Just a TPCH Test Experiment from Vascos",
   "gym_version": 2,
-  "timesteps": 20000,
+  "timesteps": 10000,
   "random_seed": 60,
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,
   "action_manager": "PartitionActionManager",
   "observation_manager": "PartitionPlanEmbeddingObservationManagerWithCost",
-  "reward_calculator": "AbsoluteDifferenceToPreviousReward",
-  "max_steps_per_episode": 2,
+  "reward_calculator": "RelativeDifferenceToPreviousReward",
+  "max_steps_per_episode": 20,
   "validation_frequency": 1000,
   "result_path": "experiment_results",
   "workload_embedder": {
     "type": "PlanEmbedderLSIBOW",
-    "representation_size": 36
+    "representation_size": 21
   },
   "rl_algorithm": {
     "algorithm": "PPO2",
@@ -48,10 +48,6 @@
     "unknown_queries": 0
   },
   "comparison_algorithms": [],
-  "budgets": {
-    "training": false,
-    "validation_and_testing": [500, 1000, 1500, 2500, 3500, 5000, 6500, 8000, 10000]
-  },
   "column_filters": {
     "TableNumRowsFilter": 10000
   }

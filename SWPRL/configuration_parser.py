@@ -11,7 +11,6 @@ class ConfigurationParser(object):
             "workload",
             "gym_version",
             "random_seed",
-            "budgets",
             "max_steps_per_episode",
             "action_manager",
             "observation_manager",
@@ -36,7 +35,6 @@ class ConfigurationParser(object):
                 "unknown_queries",
             ],
             "rl_algorithm": ["stable_baselines_version", "algorithm", "gamma", "policy", "args"],
-            "budgets": ["training", "validation_and_testing"],
         }
 
         with open(configuration_file) as f:
@@ -54,7 +52,6 @@ class ConfigurationParser(object):
             self.config.keys(), self.REQUIRED_CONFIGURATION_OPTIONS_FIRST_LEVEL, crash_on_fail=False
         )
 
-        self._translate_budgets()
         self._translate_column_filters()
         self._translate_model_architecture()
 
@@ -79,11 +76,6 @@ class ConfigurationParser(object):
         if "model_architecture" in self.config["rl_algorithm"]:
             return
         self.config["rl_algorithm"]["model_architecture"] = None
-
-    def _translate_budgets(self):
-        for key in self.config["budgets"].keys():
-            if self.config["budgets"][key] is False:
-                self.config["budgets"][key] = None
 
     def _translate_column_filters(self):
         if "column_filters" in self.config:

@@ -4,13 +4,12 @@ from index_selection_evaluation.selection.workload import Column
 
 @total_ordering
 class Partition:
-    def __init__(self, column, estimated_size=None):
+    def __init__(self, column):
         if not isinstance(column, Column):
             raise ValueError("Partition needs at least and at most 1 column (be of instance Column)")
         self.column = column
         self.table_name = column.table.name
-        # Store hypopg estimated size when `store_size=True` (whatif)
-        self.estimated_size = estimated_size
+        self.invalid = False
         self.hypopg_name = None
 
     # Used to sort partitions

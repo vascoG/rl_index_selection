@@ -34,21 +34,21 @@ class CostEvaluation:
 
         self.costing_time = datetime.timedelta(0)
 
-    def estimate_size(self, partition):
-        # TODO: Refactor: It is currently too complicated to compute
-        # We must search in current partitions to get an partition object with .hypopg_oid
-        result = None
-        for i in self.current_partitions:
-            if partition == i:
-                result = i
-                break
-        if result:
-            # Partition does currently exist and size can be queried
-            if not partition.estimated_size:
-                partition.estimated_size = self.what_if.estimate_partition_size(result.table_name)
-        else:
-            raise NotImplementedError("Partition does not exist and size cannot be queried.")
-            #self._simulate_or_create_index(partition, store_size=True) # TODO
+    # def estimate_size(self, partition):
+    #     # TODO: Refactor: It is currently too complicated to compute
+    #     # We must search in current partitions to get an partition object with .hypopg_oid
+    #     result = None
+    #     for i in self.current_partitions:
+    #         if partition == i:
+    #             result = i
+    #             break
+    #     if result:
+    #         # Partition does currently exist and size can be queried
+    #         if not partition.estimated_size:
+    #             partition.estimated_size = self.what_if.estimate_partition_size(result.table_name)
+    #     else:
+    #         raise NotImplementedError("Partition does not exist and size cannot be queried.")
+    #         #self._simulate_or_create_index(partition, store_size=True) # TODO
 
     # def which_indexes_utilized_and_cost(self, query, indexes):
     #     self._prepare_cost_calculation(indexes, store_size=True)
@@ -125,7 +125,7 @@ class CostEvaluation:
 
     def _simulate_or_create_partition(self, partition, store_size=False):
         if self.cost_estimation == "whatif":
-            self.what_if.simulate_partition(partition, store_size=store_size)
+            self.what_if.simulate_partition(partition)
         else:
             raise NotImplementedError("Actual runtimes are not supported yet.")
         self.current_partitions.add(partition)

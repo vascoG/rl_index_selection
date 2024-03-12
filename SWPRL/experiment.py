@@ -72,7 +72,6 @@ class Experiment(object):
             database_name=self.schema.database_name,
             experiment_id=self.id,
         )
-        self._assign_budgets_to_workloads()
         self._pickle_workloads()
 
         self.globally_partitionable_columns = self.workload_generator.globally_partitionable_columns
@@ -81,10 +80,6 @@ class Experiment(object):
         for col in self.globally_partitionable_columns_flat:
             logging.info(f"col:{col}")
         logging.info(f"Feeding {len(self.globally_partitionable_columns_flat)} candidates into the environments.")
-
-        self.action_storage_consumptions = utils.predict_partitions_sizes(
-            self.globally_partitionable_columns_flat, self.schema.database_name
-        )
 
         if "workload_embedder" in self.config:
             workload_embedder_class = getattr(
@@ -102,15 +97,6 @@ class Experiment(object):
         if len(self.workload_generator.wl_validation) > 1:
             for workloads in self.workload_generator.wl_validation:
                 self.multi_validation_wl.extend(self.rnd.sample(workloads, min(7, len(workloads))))
-
-    def _assign_budgets_to_workloads(self):
-        for workload_list in self.workload_generator.wl_testing:
-            for workload in workload_list:
-                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
-
-        for workload_list in self.workload_generator.wl_validation:
-            for workload in workload_list:
-                workload.budget = self.rnd.choice(self.config["budgets"]["validation_and_testing"])
 
     def _pickle_workloads(self):
         with open(f"{self.experiment_folder_path}/testing_workloads.pickle", "wb") as handle:
@@ -173,13 +159,6 @@ class Experiment(object):
                 f"./{self.experiment_folder_path}/report_ID_{self.id}.txt"
             )
         )
-
-    def _get_wl_budgets_from_model_perfs(self, perfs):
-        wl_budgets = []
-        for perf in perfs:
-            assert perf["evaluated_workload"].budget == perf["available_budget"], "Budget mismatch!"
-            wl_budgets.append(perf["evaluated_workload"].budget)
-        return wl_budgets
 
     def start_learning(self):
         self.training_start_time = datetime.datetime.now()
@@ -296,9 +275,6 @@ class Experiment(object):
                     _, self.performance_test_best_mean_reward_model_mv, self.test_bm_details_mv = self.test_bm_mv[idx]
                     _, self.performance_vali_best_mean_reward_model_mv, self.vali_bm_details_mv = self.vali_bm_mv[idx]
 
-                self.test_fm_wl_budgets = self._get_wl_budgets_from_model_perfs(test_fm_perfs)
-                self.vali_fm_wl_budgets = self._get_wl_budgets_from_model_perfs(vali_fm_perfs)
-
                 f.write(
                     (
                         "        Final model:               "
@@ -349,7 +325,6 @@ class Experiment(object):
                         continue
                     f.write(f"        {key}:                    {np.mean(value[idx]):.2f} ({value[idx]})\n")
                 f.write("\n")
-                f.write(f"        Budgets:                   {self.test_fm_wl_budgets}\n")
                 f.write("\n")
                 f.write("    Final mean performance validation:\n")
                 f.write(
@@ -402,7 +377,6 @@ class Experiment(object):
                         continue
                     f.write(f"        {key}:                    {np.mean(value[idx]):.2f} ({value[idx]})\n")
                 f.write("\n")
-                f.write(f"        Budgets:                   {self.vali_fm_wl_budgets}\n")
                 f.write("\n")
                 f.write("\n")
             f.write("Overall Test:\n")
@@ -563,8 +537,8 @@ class Experiment(object):
 
                     self.evaluated_workloads_strs.append(f"{model_performance['evaluated_workload']}\n"f"{indexes}\n")
 
-    def suggest_indexes(self, model):
-        # choose one workload to suggest indexes for (randomly)
+    def suggest_partitions(self, model):
+        # choose one workload to suggest partitions for (randomly)
         test_wl = self.rnd.choice(self.rnd.choice(self.workload_generator.wl_testing))
 
         test_env = self.DummyVecEnv([self.make_env(0, EnvironmentType.TESTING, [test_wl])])
@@ -639,7 +613,6 @@ class Experiment(object):
             )
             action_manager = action_manager_class(
                 partitionable_columns=self.globally_partitionable_columns,
-                action_storage_consumptions=self.action_storage_consumptions,
                 sb_version=self.config["rl_algorithm"]["stable_baselines_version"],
             )
 
