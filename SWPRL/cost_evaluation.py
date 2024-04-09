@@ -2,19 +2,22 @@ import datetime
 import logging
 
 from .what_if_partition_creation import WhatIfPartitionCreation
+from .import utils
+
+from .expression_parser import ExpressionParser
 
 
 class CostEvaluation:
-    def __init__(self, db_connector, cost_estimation="whatif"):
+    def __init__(self, db_connector):
         logging.debug("Init cost evaluation")
         self.db_connector = db_connector
-        self.cost_estimation = cost_estimation
-        logging.info("Cost estimation with " + self.cost_estimation)
         self.what_if = WhatIfPartitionCreation(db_connector)
         self.current_partitions = set()
 
         if len(self.current_partitions) != 0:
             assert len(self.what_if.all_simulated_partitions()) == len(self.current_partitions)
+
+        self.expression_parser = ExpressionParser()
 
         self.cost_requests = 0
         self.cache_hits = 0
@@ -27,10 +30,12 @@ class CostEvaluation:
         self.cache_plans = {}
 
         self.completed = False
-        # It is not necessary to drop hypothetical partitions during __init__().
-        # These are only created per connection. Hence, non should be present.
 
         self.relevant_partitions_cache = {}
+
+        self.cache_percentiles = {}
+
+        self.cache_intervals = {}
 
         self.costing_time = datetime.timedelta(0)
 
@@ -76,18 +81,17 @@ class CostEvaluation:
 
     #     return recommended_indexes, cost
 
-    # def calculate_cost(self, workload, indexes, store_size=False):
-    #     assert (
-    #         self.completed is False
-    #     ), "Cost Evaluation is completed and cannot be reused."
-    #     self._prepare_cost_calculation(indexes, store_size=store_size)
-    #     total_cost = 0
+    def calculate_cost(self, workload, partitions):
+        assert (
+            self.completed is False
+        ), "Cost Evaluation is completed and cannot be reused."
+        total_cost = 0
 
-    #     # TODO: Make query cost higher for queries which are running often
-    #     for query in workload.queries:
-    #         self.cost_requests += 1
-    #         total_cost += self._request_cache(query, indexes) * query.frequency
-    #     return total_cost
+        for query in workload.queries:
+            self.cost_requests += 1
+            cost = self._request_cache(query, partitions)
+            total_cost += cost * query.frequency
+        return total_cost
 
     def calculate_cost_and_plans(self, workload, partitions, store_size=False):
         assert (
@@ -95,7 +99,7 @@ class CostEvaluation:
         ), "Cost Evaluation is completed and cannot be reused."
         start_time = datetime.datetime.now()
 
-        self._prepare_cost_calculation(partitions, store_size=store_size)
+        # self._prepare_cost_calculation(partitions, store_size=store_size)
         total_cost = 0
         plans = []
         costs = []
@@ -103,7 +107,8 @@ class CostEvaluation:
         for query in workload.queries:
             self.cost_requests += 1
             cost, plan = self._request_cache_plans(query, partitions)
-            total_cost += cost * query.frequency
+            cost = self.estimate_cost(plan, partitions)
+            total_cost += cost 
             plans.append(plan)
             costs.append(cost)
 
@@ -169,9 +174,155 @@ class CostEvaluation:
             return self.cache[(query, relevant_partitions)]
         # If no cache hit request cost from database system
         else:
-            cost = self._get_cost(query)
+            query_plan = self.db_connector.get_plan(query)
+            cost = self.estimate_cost(query_plan, relevant_partitions)
             self.cache[(query, relevant_partitions)] = cost
             return cost
+
+    def estimate_cost(self, query_plan, partitions):
+
+        total_cost = query_plan["Total Cost"]
+
+        if not partitions or len(partitions) == 0: # if there are no partitions, return the cost of the query
+            return total_cost
+        
+        if "Plans" in query_plan: #if there are subplans, sum all their costs
+            return sum([self.estimate_cost(plan, partitions) for plan in query_plan["Plans"]])
+
+        
+        if "Filter" not in  query_plan: # if there is no filter, it needs to scan the whole table
+            return total_cost
+
+        query_filter = query_plan["Filter"]
+
+        intervals = self._request_cache_intervals(query_filter)
+    
+        relevant_partitions = [x for x in partitions if any([x.column.name.lower()==interval.lower() for interval in intervals])]
+
+        if not relevant_partitions: # if there are no relevant partitions, return the cost of the query
+            return total_cost
+
+        relevant_partitions.sort() 
+
+        percentiles = self._request_cache_percentiles(relevant_partitions[0].column)
+        percentiles = [p[0] for p in percentiles]
+
+        if not percentiles:
+            return total_cost
+
+        if relevant_partitions[0].column.is_date():
+            return self.estimate_costs_date(relevant_partitions[0], total_cost, intervals)
+
+        # assuming a simple query for now
+        maximum_percentile_bound = 0
+        if op == "=":
+            for partition in relevant_partitions:
+                if second <= partition.upper_bound_value(percentiles):
+                    return total_cost*(partition.upper_bound - maximum_percentile_bound)
+                if partition.upper_bound > maximum_percentile_bound:
+                    maximum_percentile_bound = partition.upper_bound
+            return total_cost*(1-maximum_percentile_bound)
+        elif op == "<":
+            for partition in relevant_partitions:
+                upper_bound_value = partition.upper_bound_value(percentiles)
+                if upper_bound_value > second:
+                    return total_cost*partition.upper_bound
+            return total_cost*(len(relevant_partitions)+1)
+
+    def get_interval(self, expression, interval):
+        op = expression[1]
+        if op == "AND" or op == "and":
+            *_, (e1,i1) = self.get_interval(expression[0], interval).items()
+            *_, (e2,i2) = self.get_interval(expression[2], interval).items()
+            if e1 == e2:
+                interval[e1] = utils.intersect_intervals(i1, i2)
+            else:
+                interval[e1] = i1
+                interval[e2] = i2
+        elif op == "OR" or op == "or":
+            *_, (e1,i1) = self.get_interval(expression[0], interval).items()
+            *_, (e2,i2) = self.get_interval(expression[2], interval).items()
+            if e1 == e2:
+                interval[e1] = utils.union_intervals(i1, i2)
+            else:
+                interval[e1] = i1
+                interval[e2] = i2
+        else:
+            (e,i) = self._interval(expression)
+            interval[e]=i
+
+        return interval
+            
+    def _interval(self, expression):
+        op = expression[1]
+        val = expression[2]
+        if isinstance(val, str) and ((val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'"))):
+            val = val[1:-1]
+        if op == "=":
+            return (expression[0], (val,val))
+        elif op == "<" or op == "<=":
+            return (expression[0], (None,val))
+        elif op == ">" or op == ">=":
+            return (expression[0], (val, None))
+        else:
+            raise NotImplementedError(f"Operator not supported - {op}")
+
+    def estimate_costs_date(self, partition, total_cost, intervals):
+        (column, interval), *_ = intervals.items()
+        (minimum, maximum) = interval
+        minimum = datetime.datetime.strptime(minimum, "%Y-%m-%d")
+        maximum = datetime.datetime.strptime(maximum, "%Y-%m-%d")
+        difference = (maximum - minimum)
+
+        if partition.partition_rate == "daily":
+            if difference.days == 0:
+                return total_cost/30
+            else:
+                return total_cost*difference.days
+        elif partition.partition_rate == "weekly":
+            monday1 = minimum - datetime.timedelta(days=minimum.weekday())
+            monday2 = maximum - datetime.timedelta(days=maximum.weekday())
+            difference = (monday2 - monday1).days / 7
+            if difference == 0:
+                return total_cost/15
+            else:
+                return total_cost*difference
+        elif partition.partition_rate == "monthly":
+            difference = maximum.month - minimum.month
+            if difference == 0:
+                return total_cost/5
+            else:
+                return total_cost*difference
+        elif partition.partition_rate == "yearly":
+            difference = maximum.year - minimum.year
+            if difference == 0:
+                return total_cost/2
+            else:
+                return total_cost*difference
+
+    def sanitize(self, value):
+        value = value.split("::")[0]
+        value = value.replace("'","")
+        # remove leading and trailing whitespaces
+        value = value.strip()
+        return value
+
+    def _request_cache_percentiles(self, column):
+        if column in self.cache_percentiles:
+            return self.cache_percentiles[column]
+        else:
+            percentiles = self.db_connector.get_column_percentiles(column)
+            self.cache_percentiles[column] = percentiles
+            return percentiles
+        
+    def _request_cache_intervals(self, query_filter):
+        if query_filter in self.cache_intervals:
+            return self.cache_intervals[query_filter]
+        else:
+            parsed_expression = self.expression_parser.parse(query_filter)[0]
+            intervals = self.get_interval(parsed_expression.asList(), {})
+            self.cache_intervals[query_filter] = intervals
+            return intervals
 
     def _request_cache_plans(self, query, partitions):
         q_i_hash = (query, frozenset(partitions))
@@ -194,6 +345,6 @@ class CostEvaluation:
     @staticmethod
     def _relevant_partitions(query, partitions):
         relevant_partitions = [
-            x.column for x in partitions
+            x for x in partitions if x.column in query.columns
         ]
         return frozenset(relevant_partitions)

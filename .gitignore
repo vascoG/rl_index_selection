@@ -140,3 +140,7 @@ imdb_data
 # macOS
 .DS_Store
 ._.DS_Store
+
+# huge files
+SWPRL/tpc-e-tool/flat_out
+SWPRL/tpc-e-tool/flat_in

@@ -30,6 +30,10 @@ class DBEnvV2(gym.Env):
         self.cost_evaluation = CostEvaluation(self.connector)
 
         self.globally_partitionable_columns_flat = config["globally_partitionable_columns_flat"]
+
+        self.all_partitions = config["all_partitions"]
+        self.all_partitions_flat = config["all_partitions_flat"]
+
         # In certain cases, workloads are consumed: therefore, we need copy
         self.workloads = copy.copy(config["workloads"])
         self.current_workload_idx = 0
@@ -62,17 +66,17 @@ class DBEnvV2(gym.Env):
         assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
         assert (
             self.valid_actions[action] == self.action_manager.ALLOWED_ACTION
-        ), f"Agent has chosen invalid action: {action}"
+        ), f"Agent has chosen invalid action: {action} - {self.all_partitions_flat[action]}"
         assert (
-            Partition(self.globally_partitionable_columns_flat[action]) not in self.current_partitions
-        ), f"{Partition(self.globally_partitionable_columns_flat[action])} already in self.current_partitions"
+            self.all_partitions_flat[action] not in self.current_partitions
+        ), f"{self.all_partitions_flat[action]} already in self.current_partitions"
 
     def step(self, action):
         self._step_asserts(action)
 
         self.steps_taken += 1
 
-        new_partition = Partition(self.globally_partitionable_columns_flat[action])
+        new_partition = self.all_partitions_flat[action]
         self.current_partitions.add(new_partition)
 
         environment_state = self._update_return_env_state(
@@ -106,7 +110,6 @@ class DBEnvV2(gym.Env):
             f"Initial cost: {self.initial_costs:,.2f}, now: {self.current_costs:,.2f} "
             f"({episode_performance['achieved_cost']:.2f}). Reward: {self.reward_calculator.accumulated_reward}.\n    "
             f"There are {len(self.current_partitions)} partitions:\n    "
-            f"{self.current_partitions}\n    "
         )
         logging.warning(output)
 

@@ -35,7 +35,7 @@ class ActionManager(object):
         return spaces.Discrete(self.number_of_actions)
 
     def get_initial_valid_actions(self, workload):
-        self.current_action_status = [0 for action in range(self.number_of_columns)]
+        self.current_action_status = [0 for action in range(self.number_of_actions)]
 
         self.valid_actions = [self.FORBIDDEN_ACTION for action in range(self.number_of_actions)]
         self._remaining_valid_actions = []
@@ -47,12 +47,17 @@ class ActionManager(object):
         return np.array(self.valid_actions)
 
     def update_valid_actions(self, last_action):
-        assert self.partitionable_columns_flat[last_action] not in self.current_partitions
+        # if last_action == len(self.valid_actions) - 1:
+        #     for action_idx in copy.copy(self._remaining_valid_actions):
+        #         self.valid_actions[action_idx] = self.FORBIDDEN_ACTION
+        #         self._remaining_valid_actions.remove(action_idx)
+        #     return np.array(self.valid_actions), False
+        assert self.all_partitions_flat[last_action] not in self.current_partitions
 
 
         self.current_action_status[last_action] += 1
     
-        self.current_partitions.add(self.partitionable_columns_flat[last_action])
+        self.current_partitions.add(self.all_partitions_flat[last_action])
 
         self.valid_actions[last_action] = self.FORBIDDEN_ACTION
         self._remaining_valid_actions.remove(last_action)
@@ -85,40 +90,41 @@ class ActionManager(object):
 
 class PartitionActionManager(ActionManager):
     def __init__(
-        self, partitionable_columns, sb_version
+        self, partitionable_columns, sb_version, all_partitions
     ):
         ActionManager.__init__(self, sb_version)
 
         # partitionable_columns is a list of lists (representing partitionable columns on each table)
         self.partitionable_columns = partitionable_columns
-
         self.partitionable_columns_flat = [
             item for sublist in self.partitionable_columns for item in sublist
         ]
-        self.number_of_actions = len(self.partitionable_columns_flat)
-        self.number_of_columns = self.number_of_actions
 
-        self.column_to_idx_table = {}
-        for idx, table in enumerate(self.partitionable_columns):
-            for column in table:
-                self.column_to_idx_table[column] = idx
+        self.all_partitions = all_partitions # all_partitions is a list of lists of lists (representing all partitions for each column for each table)
 
-        self.column_to_idx = {}
-        for table in partitionable_columns:
-            for idx, column in enumerate(table):
-                self.column_to_idx[column] = idx
+        self.all_partitions_flat = [
+            subitem for sublist in self.all_partitions for item in sublist for subitem in item
+        ]
+
+
+        self.number_of_actions = len(self.all_partitions_flat)
 
     def _valid_actions_based_on_last_action(self, last_action):
 
-        last_column = self.partitionable_columns_flat[last_action]
-        last_table = self.column_to_idx_table[last_column]
+        last_partition = self.all_partitions_flat[last_action]
+        last_column = last_partition.column
+        last_table = last_column.table
 
-        for column_idx in copy.copy(self._remaining_valid_actions):
-            column = self.partitionable_columns_flat[column_idx]
-            table = self.column_to_idx_table[column]
-            if table == last_table:
-                self.valid_actions[column_idx] = self.FORBIDDEN_ACTION
-                self._remaining_valid_actions.remove(column_idx)
+        for partition_idx in copy.copy(self._remaining_valid_actions):
+            partition = self.all_partitions_flat[partition_idx]
+            column = partition.column
+            table = column.table
+            if column.is_date() and column == last_column:
+                self.valid_actions[partition_idx] = self.FORBIDDEN_ACTION
+                self._remaining_valid_actions.remove(partition_idx)
+            if table == last_table and column != last_column:
+                self.valid_actions[partition_idx] = self.FORBIDDEN_ACTION
+                self._remaining_valid_actions.remove(partition_idx)
 
 
     def _valid_actions_based_on_workload(self, workload):
@@ -126,15 +132,14 @@ class PartitionActionManager(ActionManager):
         partitionable_columns = partitionable_columns & frozenset(self.partitionable_columns_flat)
         self.wl_partitionable_columns = partitionable_columns
 
-        for partitionable_column in partitionable_columns:
-            for column_idx, column in enumerate(
-                self.partitionable_columns_flat
-            ):
-                if partitionable_column == column:
-                    self.valid_actions[column_idx] = self.ALLOWED_ACTION
-                    self._remaining_valid_actions.append(column_idx)
+        for partition_idx, partition in enumerate(
+                self.all_partitions_flat
+        ):
+            if partition.column in partitionable_columns:
+                self.valid_actions[partition_idx] = self.ALLOWED_ACTION
+                self._remaining_valid_actions.append(partition_idx)
 
-        assert np.count_nonzero(np.array(self.valid_actions) == self.ALLOWED_ACTION) == len(
-            partitionable_columns
-        ), "Valid actions mismatch partionable columns"
 
+        # assert np.count_nonzero(np.array(self.valid_actions) == self.ALLOWED_ACTION)-1 == 10*len(
+        #     partitionable_columns
+        # ), f"Mismatch partionable columns {len(partitionable_columns)} and valid actions {len(self.valid_actions)}."

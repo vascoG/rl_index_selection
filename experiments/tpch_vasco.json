@@ -1,6 +1,6 @@
 {
-  "id": "Vasco_TPCH_Test_Experiment_1103_2",
-  "description": "Just a TPCH Test Experiment from Vasco 1103_2",
+  "id": "Vasco_TPCH_Test_Experiment_2003",
+  "description": "Just a TPCH Test Experiment from Vasco 2003",
   "gym_version": 1,
   "timesteps": 20000,
   "random_seed": 60,

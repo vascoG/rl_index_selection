@@ -84,3 +84,55 @@ from SWPRL.partition import Partition
 #         result_column_combinations.append(list(unique))
 
 #     return result_column_combinations
+
+def all_partitions_from_columns(columns):
+    print(f"Generating all partitions for {len(columns)} tables.")
+
+    partitions = []
+    for table in columns:
+        tables = []
+        for column in table:
+            columns = []
+            if column.is_date():
+                for partition_rate in ["daily", "weekly", "monthly", "yearly"]:
+                    columns.append(Partition(column, partition_rate))
+            else:
+                for upper_bound in range(1,10):
+                    columns.append(Partition(column, upper_bound/10))
+            tables.append(columns)
+        partitions.append(tables)
+    
+    return partitions
+
+
+def intersect_intervals(interval1, interval2):
+    if interval1[0] is None:
+        minimum = interval2[0]
+    elif interval2[0] is None:
+        minimum = interval1[0]
+    else:
+        minimum = max(interval1[0], interval2[0])
+    
+    if interval1[1] is None:
+        maximum = interval2[1]
+    elif interval2[1] is None:
+        maximum = interval1[1]
+    else:
+        maximum = min(interval1[1], interval2[1])
+    
+    # if interval1[1] < interval2[0] or interval2[1] < interval1[0]:
+    #     return None
+    return (minimum, maximum)
+
+def union_intervals(interval1, interval2):
+    if interval1[0] is None or interval2[0] is None:
+        minimum = None
+    else:
+        minimum = min(interval1[0], interval2[0])
+    
+    if interval1[1] is None or interval2[1] is None:
+        maximum = None
+    else:
+        maximum = max(interval1[1], interval2[1])
+
+    return (minimum, maximum)

@@ -77,6 +77,8 @@ class Experiment(object):
         self.globally_partitionable_columns = self.workload_generator.globally_partitionable_columns
         self.globally_partitionable_columns_flat = [col for sublist in self.globally_partitionable_columns for col in sublist]
 
+        self.all_partitions = utils.all_partitions_from_columns(self.globally_partitionable_columns) # [0.1,0.2,0.3....] for every column for every table
+
         for col in self.globally_partitionable_columns_flat:
             logging.info(f"col:{col}")
         logging.info(f"Feeding {len(self.globally_partitionable_columns_flat)} candidates into the environments.")
@@ -90,7 +92,7 @@ class Experiment(object):
                 self.workload_generator.query_texts,
                 self.config["workload_embedder"]["representation_size"],
                 workload_embedder_connector,
-                self.globally_partitionable_columns_flat, # TODO: I changed this to flat, check if its right
+                self.globally_partitionable_columns_flat, 
             )
 
         self.multi_validation_wl = []
@@ -614,6 +616,7 @@ class Experiment(object):
             action_manager = action_manager_class(
                 partitionable_columns=self.globally_partitionable_columns,
                 sb_version=self.config["rl_algorithm"]["stable_baselines_version"],
+                all_partitions=self.all_partitions,
             )
 
             if self.number_of_actions is None:
@@ -628,7 +631,7 @@ class Experiment(object):
                 importlib.import_module("SWPRL.observation_manager"), self.config["observation_manager"]
             )
             observation_manager = observation_manager_class(
-                action_manager.number_of_columns, observation_manager_config
+                action_manager.number_of_actions, observation_manager_config
             )
 
             if self.number_of_features is None:
@@ -656,6 +659,8 @@ class Experiment(object):
                 config={
                     "database_name": self.schema.database_name,
                     "globally_partitionable_columns_flat": self.globally_partitionable_columns_flat,
+                    "all_partitions": self.all_partitions,
+                    "all_partitions_flat": action_manager.all_partitions_flat,
                     "workloads": workloads,
                     "random_seed": self.config["random_seed"] + env_id,
                     "max_steps_per_episode": self.config["max_steps_per_episode"],

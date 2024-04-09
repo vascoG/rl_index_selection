@@ -33,20 +33,29 @@ def load_and_run():
 
     ParallelEnv = SubprocVecEnv if experiment.config["parallel_environments"] > 1 else DummyVecEnv
 
-    training_env = ParallelEnv(
-        [experiment.make_env(env_id) for env_id in range(experiment.config["parallel_environments"])]
+    env = ParallelEnv(
+        [experiment.make_env(env_id, environment_type=EnvironmentType.TESTING) for env_id in range(experiment.config["parallel_environments"])]
     )
-    training_env = VecNormalize(
-        training_env, norm_obs=True, norm_reward=True, gamma=experiment.config["rl_algorithm"]["gamma"], training=True
+    env = VecNormalize(
+        env, norm_obs=True, norm_reward=True, gamma=experiment.config["rl_algorithm"]["gamma"], training=False
     )
 
     experiment.model_type = algorithm_class
-    
-    model = experiment.load_model(algorithm_class, training_env)
 
-    experiment.set_model(model)
+    model = algorithm_class.load(f"{experiment.experiment_folder_path}/final_model.zip", env=env)
+    obs = env.reset()
+    done = False
+    while not done:
+        action_mask = [env.get_attr("valid_actions")[0]]
+        action, _ = model.predict(obs, deterministic=True, action_mask=action_mask)
+        obs, _, done, _ = env.step(action)
+
+    
+    # model = experiment.load_model(algorithm_class, training_env)
+
+    # experiment.set_model(model)
    
-    experiment.suggest_partitions(model)
+    # experiment.suggest_partitions(model)
 
 
 if __name__ == "__main__":

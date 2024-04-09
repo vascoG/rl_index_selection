@@ -15,13 +15,16 @@ class Schema(object):
         self.database_name = table_generator.database_name()
         self.tables = table_generator.tables
 
+        connector = PostgresDatabaseConnector(self.database_name, autocommit=True)
+
         self.columns = []
         for table in self.tables:
             for column in table.columns:
+                column.type = connector._type(column)
                 self.columns.append(column)
 
         for filter_name in filters.keys():
-            filter_class = getattr(importlib.import_module("swirl.schema"), filter_name)
+            filter_class = getattr(importlib.import_module("SWPRL.schema"), filter_name)
             filter_instance = filter_class(filters[filter_name], self.database_name)
             self.columns = filter_instance.apply_filter(self.columns)
 

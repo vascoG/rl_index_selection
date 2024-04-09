@@ -53,7 +53,7 @@ class WorkloadGenerator(object):
 
         self.globally_partitionable_columns = self._select_partitionable_columns()
 
-        size = sum([len(table.columns) for table in workload_tables])
+        size = sum([len(table) for table in self.globally_partitionable_columns])
         logging.info(f"Globally partitionable columns (size: {size}) - {self.globally_partitionable_columns}")
 
         validation_instances = config["validation_testing"]["number_of_workloads"]
@@ -172,7 +172,7 @@ class WorkloadGenerator(object):
 
         finished_queries = []
         for query_file in query_files:
-            queries = query_file.readlines()[:1]
+            queries = query_file.readlines()
             queries = self._preprocess_queries(queries)
 
             finished_queries.append(queries)

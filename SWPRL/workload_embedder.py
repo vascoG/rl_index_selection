@@ -55,48 +55,47 @@ class WorkloadEmbedder(object):
                     break
             if not found:
                 self.columns_by_table.append([column])
-
-
+        
+        # [without partitions], [with partitions]
+        self.plans = ([], [])
         if retrieve_plans:
-            cost_evaluation = CostEvaluation(self.database_connector)
-            # [without partitions], [with partitions]
-            self.plans = ([], [])
+            cost_evaluation = CostEvaluation(self.database_connector)            
             for query_idx, query_texts_per_query_class in enumerate(query_texts):
                 query_text = query_texts_per_query_class[0]
                 query = Query(query_idx, query_text)
                 plan = self.database_connector.get_plan(query)
                 self.plans[0].append(plan)
 
-            logging.critical(f"Creating all partitions of width 1.")
+            # logging.critical(f"Creating all partitions of width 1.")
 
-            created_partitions = 0
-            i = 0
-            while created_partitions < len(self.columns):
-                logging.info(f"Created partitions: {created_partitions}")
-                potential_partitions = []
-                logging.info(f"i: {i}")
-                for table in self.columns_by_table:
-                    if i >= len(table):
-                        continue 
+            # created_partitions = 0
+            # i = 0
+            # while created_partitions < len(self.columns):
+            #     logging.info(f"Created partitions: {created_partitions}")
+            #     potential_partitions = []
+            #     logging.info(f"i: {i}")
+            #     for table in self.columns_by_table:
+            #         if i >= len(table):
+            #             continue 
 
-                    potential_partition = Partition(table[i])
-                    self.database_connector.get_column_statistics(potential_partition)
-                    cost_evaluation.what_if.simulate_partition(potential_partition) 
-                    potential_partitions.append(potential_partition)
-                    created_partitions += 1
+            #         potential_partition = Partition(table[i])
+            #         self.database_connector.get_column_statistics(potential_partition)
+            #         cost_evaluation.what_if.simulate_partition(potential_partition) 
+            #         potential_partitions.append(potential_partition)
+            #         created_partitions += 1
 
-                i+=1
+            #     i+=1
 
-                for query_idx, query_texts_per_query_class in enumerate(query_texts):
-                    query_text = query_texts_per_query_class[0]
-                    query = Query(query_idx, query_text)
-                    plan = self.database_connector.get_plan(query)
-                    self.plans[1].append(plan)
+            #     for query_idx, query_texts_per_query_class in enumerate(query_texts):
+            #         query_text = query_texts_per_query_class[0]
+            #         query = Query(query_idx, query_text)
+            #         plan = self.database_connector.get_plan(query)
+            #         self.plans[1].append(plan)
 
-                for potential_partition in potential_partitions:
-                    cost_evaluation.what_if.drop_simulated_partition(potential_partition)
+            #     for potential_partition in potential_partitions:
+            #         cost_evaluation.what_if.drop_simulated_partition(potential_partition)
 
-            logging.critical(f"Finished checking {created_partitions} partitions.")
+            # logging.critical(f"Finished checking {created_partitions} partitions.")
 
         self.database_connector = None
 
@@ -105,7 +104,7 @@ class WorkloadEmbedder(object):
 
 
 class PlanEmbedder(WorkloadEmbedder):
-    def __init__(self, query_texts, representation_size, database_connector, columns, without_partitions=False):
+    def __init__(self, query_texts, representation_size, database_connector, columns, without_partitions=True):
         WorkloadEmbedder.__init__(
             self, query_texts, representation_size, database_connector, columns, retrieve_plans=True
         )
