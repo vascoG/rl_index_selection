@@ -28,7 +28,6 @@ class ConfigurationParser(object):
                 "benchmark",
                 "training_instances",
                 "validation_testing",
-                "size",
                 "excluded_query_classes",
                 "scale_factor",
                 "similar_workloads",
@@ -102,7 +101,7 @@ class ConfigurationParser(object):
                 self.config["workload"]["validation_testing"]["unknown_query_probabilities"][-1] > 0
             ), "There is no point in specyfing unknown queries if unknown_query_probability is 0."
 
-        if self.config["workload"]["benchmark"] != "JOB":
+        if self.config["workload"]["benchmark"] != "JOB" and self.config["workload"]["benchmark"] != "Kevel":
             assert (
                 len(self.config["workload"]["excluded_query_classes"]) > 0
             ), "Are you sure that these workloads should not exclude certain query classes?"

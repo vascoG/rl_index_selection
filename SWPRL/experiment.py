@@ -74,6 +74,8 @@ class Experiment(object):
         )
         self._pickle_workloads()
 
+        self.workload_size = self.workload_generator.size
+
         self.globally_partitionable_columns = self.workload_generator.globally_partitionable_columns
         self.globally_partitionable_columns_flat = [col for sublist in self.globally_partitionable_columns for col in sublist]
 
@@ -625,7 +627,7 @@ class Experiment(object):
             observation_manager_config = {
                 "number_of_query_classes": self.workload_generator.number_of_query_classes,
                 "workload_embedder": self.workload_embedder if "workload_embedder" in self.config else None,
-                "workload_size": self.config["workload"]["size"],
+                "workload_size": self.workload_size
             }
             observation_manager_class = getattr(
                 importlib.import_module("SWPRL.observation_manager"), self.config["observation_manager"]

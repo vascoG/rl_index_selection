@@ -27,6 +27,7 @@ class WorkloadGenerator(object):
             "TPCH",
             "TPCDS",
             "JOB",
+            "Kevel",
         ], f"Benchmark '{config['benchmark']}' is currently not supported."
         # TODO: Change benchmarks later
 
@@ -50,6 +51,7 @@ class WorkloadGenerator(object):
         self.query_texts = self._retrieve_query_texts()
         self.query_classes = set(range(1, self.number_of_query_classes + 1))
         self.available_query_classes = self.query_classes - self.excluded_query_classes
+        self.size = len(self.available_query_classes)
 
         self.globally_partitionable_columns = self._select_partitionable_columns()
 
@@ -67,13 +69,13 @@ class WorkloadGenerator(object):
             self.wl_validation = [None]
             self.wl_testing = [None]
             _, self.wl_validation[0], self.wl_testing[0] = self._generate_workloads(
-                0, validation_instances, test_instances, config["size"]
+                0, validation_instances, test_instances, self.size
             )
             if config["query_class_change_frequency"] is None:
-                self.wl_training = self._generate_similar_workloads(config["training_instances"], config["size"])
+                self.wl_training = self._generate_similar_workloads(config["training_instances"], self.size)
             else:
                 self.wl_training = self._generate_similar_workloads_qccf(
-                    config["training_instances"], config["size"], config["query_class_change_frequency"]
+                    config["training_instances"], self.size, config["query_class_change_frequency"]
                 )
         elif config["unknown_queries"] > 0:
             assert (
@@ -114,7 +116,7 @@ class WorkloadGenerator(object):
                     0,
                     validation_instances,
                     test_instances,
-                    config["size"],
+                    self.size,
                     unknown_query_probability=unknown_query_probability,
                 )
                 self.wl_validation.append(wl_validation)
@@ -136,19 +138,19 @@ class WorkloadGenerator(object):
                         f"Similar workloads with query_class_change_frequency: {config['query_class_change_frequency']}"
                     )
                     self.wl_training = self._generate_similar_workloads_qccf(
-                        config["training_instances"], config["size"], config["query_class_change_frequency"]
+                        config["training_instances"], self.size, config["query_class_change_frequency"]
                     )
                 else:
-                    self.wl_training = self._generate_similar_workloads(config["training_instances"], config["size"])
+                    self.wl_training = self._generate_similar_workloads(config["training_instances"], self.size)
             else:
-                self.wl_training, _, _ = self._generate_workloads(config["training_instances"], 0, 0, config["size"])
+                self.wl_training, _, _ = self._generate_workloads(config["training_instances"], 0, 0, self.size)
             # We are removing the restriction now.
             self.available_query_classes = original_available_query_classes
         else:
             self.wl_validation = [None]
             self.wl_testing = [None]
             self.wl_training, self.wl_validation[0], self.wl_testing[0] = self._generate_workloads(
-                config["training_instances"], validation_instances, test_instances, config["size"]
+                config["training_instances"], validation_instances, test_instances, self.size
             )
 
         logging.critical(f"Sample training workloads: {self.rnd.sample(self.wl_training, 10)}")
@@ -161,27 +163,39 @@ class WorkloadGenerator(object):
             return 99
         elif self.benchmark == "JOB":
             return 113
+        elif self.benchmark == "Kevel":
+            return 0 # it will be set later
         else:
             raise ValueError("Unsupported Benchmark type provided, only TPCH, TPCDS, and JOB supported.")
 
     def _retrieve_query_texts(self):
-        query_files = [
-            open(f"{QUERY_PATH}/{self.benchmark}/{self.benchmark}_{file_number}.txt", "r")
-            for file_number in range(1, self.number_of_query_classes + 1)
-        ]
-
-        finished_queries = []
-        for query_file in query_files:
+        if self.benchmark == "Kevel":
+            query_file = open(f"{QUERY_PATH}/{self.benchmark}/{self.benchmark}_queries.txt", "r")
             queries = query_file.readlines()
-            queries = self._preprocess_queries(queries)
-
-            finished_queries.append(queries)
-
+            finished_queries = self._preprocess_queries(queries)
+            finished_queries = list(map(lambda x: [x], finished_queries))
+            
             query_file.close()
+            self.number_of_query_classes = len(finished_queries)
+            return finished_queries
+        else:
+            query_files = [
+                open(f"{QUERY_PATH}/{self.benchmark}/{self.benchmark}_{file_number}.txt", "r")
+                for file_number in range(1, self.number_of_query_classes + 1)
+            ]
 
-        assert len(finished_queries) == self.number_of_query_classes
+            finished_queries = []
+            for query_file in query_files:
+                queries = query_file.readlines()
+                queries = self._preprocess_queries(queries)
 
-        return finished_queries
+                finished_queries.append(queries)
+
+                query_file.close()
+
+            assert len(finished_queries) == self.number_of_query_classes
+
+            return finished_queries
 
     def _preprocess_queries(self, queries):
         processed_queries = []
@@ -247,6 +261,8 @@ class WorkloadGenerator(object):
     def _generate_workloads(
         self, train_instances, validation_instances, test_instances, size, unknown_query_probability=None
     ):
+        if self.benchmark == "Kevel":
+            self.size = len(self.available_query_classes)
         required_unique_workloads = train_instances + validation_instances + test_instances
 
         unique_workload_tuples = set()

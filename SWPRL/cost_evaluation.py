@@ -91,7 +91,8 @@ class CostEvaluation:
         for query in workload.queries:
             self.cost_requests += 1
             cost = self._request_cache(query, partitions)
-            total_cost += cost * query.frequency
+            total_cost += cost
+
         return total_cost
 
     def calculate_cost_and_plans(self, workload, partitions, store_size=False):
@@ -108,7 +109,7 @@ class CostEvaluation:
             self.cost_requests += 1
             cost, plan = self._request_cache_plans(query, partitions)
             cost = self.estimate_cost(plan, partitions)
-            total_cost += cost * query.frequency
+            total_cost += cost
             plans.append(plan)
             costs.append(cost)
 
@@ -218,6 +219,7 @@ class CostEvaluation:
                 return total_cost
 
             partitions = unique_relevant_columns[column]
+            partitions.sort()
 
             if column.is_date():
                 return self.estimate_costs_date(unique_relevant_columns[column][0], total_cost, intervals[column.name])
@@ -245,7 +247,6 @@ class CostEvaluation:
                     value = partition.upper_bound_value(percentiles)
                     
                     if interval_value_min is None:
-                        total_partitions = 0
                         # < or <=
                         if interval_value_max <= value:
                             maximum_percentile_bound = partition.upper_bound
@@ -315,33 +316,33 @@ class CostEvaluation:
         (minimum, maximum) = interval
         minimum = datetime.datetime.strptime(minimum, "%Y-%m-%d")
         maximum = datetime.datetime.strptime(maximum, "%Y-%m-%d")
-        difference = (maximum - minimum)
 
         if partition.partition_rate == "daily":
+            difference = (maximum - minimum)
             if difference.days == 0:
                 return total_cost/30
             else:
-                return total_cost*difference.days/10
+                return total_cost*difference.days/30
         elif partition.partition_rate == "weekly":
             monday1 = minimum - datetime.timedelta(days=minimum.weekday())
             monday2 = maximum - datetime.timedelta(days=maximum.weekday())
             difference = (monday2 - monday1).days / 7
             if difference == 0:
-                return total_cost/15
+                return total_cost/10
             else:
-                return total_cost*difference/7
+                return total_cost*difference/10
         elif partition.partition_rate == "monthly":
             difference = maximum.month - minimum.month
             if difference == 0:
                 return total_cost/5
             else:
-                return total_cost*difference/4
+                return total_cost*difference/5
         elif partition.partition_rate == "yearly":
             difference = maximum.year - minimum.year
             if difference == 0:
                 return total_cost/2
             else:
-                return total_cost*difference
+                return total_cost*difference/2
 
     def sanitize(self, value):
         value = value.split("::")[0]

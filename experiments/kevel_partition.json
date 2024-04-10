@@ -36,7 +36,6 @@
   "workload": {
     "benchmark": "Kevel",
     "scale_factor": 1,
-    "size": 19,
     "varying_frequencies": false,
     "training_instances": 5000,
     "validation_testing": {

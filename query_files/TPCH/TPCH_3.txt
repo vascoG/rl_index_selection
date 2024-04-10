@@ -1,10 +1,1 @@
 select n_name from nation where n_name < 'IRAQ';
-select n_name from nation where n_name < 'PORTUGAL';
-select n_name from nation where n_name = 'ALGERIA';
-select n_name from nation where n_name < 'BRAZIL';
-select n_name from nation where n_name < 'IRAN';
-select n_name from nation where n_name < 'PORTUGAL';
-select n_name from nation where n_name < 'IRAQ';
-select n_name from nation where n_name < 'IRAN';
-select n_name from nation where n_name < 'PORTUGAL';
-select n_name from nation where n_name = 'ALGERIA';

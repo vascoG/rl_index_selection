@@ -1,0 +1,8 @@
+select n_name from nation where n_name < 'IRAQ';
+select n_name from nation where n_name < 'PORTUGAL';
+select n_name from nation where n_name = 'ALGERIA';
+select n_name from nation where n_name < 'BRAZIL';
+select n_name from nation where n_name < 'IRAN';
+select l_linenumber from lineitem where l_shipdate > date '1995-03-17' and l_shipdate < date '1995-03-18';
+select l_linenumber from lineitem where l_shipdate < date '1995-03-18' and l_shipdate > date '1995-03-17';
+select l_linenumber from lineitem where l_shipdate = date '1995-03-17' and l_quantity = 5;
