@@ -43,12 +43,18 @@ def load_and_run():
     experiment.model_type = algorithm_class
 
     model = algorithm_class.load(f"{experiment.experiment_folder_path}/final_model.zip", env=env)
+
+    all_partitions_flat = [
+            subitem for sublist in experiment.all_partitions for item in sublist for subitem in item
+        ]
     obs = env.reset()
     done = False
     while not done:
         action_mask = [env.get_attr("valid_actions")[0]]
         action, _ = model.predict(obs, deterministic=True, action_mask=action_mask)
-        obs, _, done, _ = env.step(action)
+        obs, reward , done, _ = env.step(action)
+        logging.info(f"Action: {all_partitions_flat[action[0]]} - Reward: {reward}")
+
 
     
     # model = experiment.load_model(algorithm_class, training_env)
@@ -177,7 +183,7 @@ if __name__ == "__main__":
         callbacks.append(multi_validation_callback)
 
     experiment.start_learning()
-    model.learn(
+    experiment.model.learn(
         total_timesteps=experiment.config["timesteps"],
         callback=callbacks,
         tb_log_name=experiment.id,

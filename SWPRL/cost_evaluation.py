@@ -1,5 +1,6 @@
 import datetime
 import logging
+import decimal
 
 from .what_if_partition_creation import WhatIfPartitionCreation
 from .import utils
@@ -103,12 +104,11 @@ class CostEvaluation:
         total_cost = 0
         plans = []
         costs = []
-
         for query in workload.queries:
             self.cost_requests += 1
             cost, plan = self._request_cache_plans(query, partitions)
             cost = self.estimate_cost(plan, partitions)
-            total_cost += cost 
+            total_cost += cost * query.frequency
             plans.append(plan)
             costs.append(cost)
 
@@ -197,37 +197,81 @@ class CostEvaluation:
 
         intervals = self._request_cache_intervals(query_filter)
     
-        relevant_partitions = [x for x in partitions if any([x.column.name.lower()==interval.lower() for interval in intervals])]
+        relevant_partitions = [x for x in partitions if any([x.column.name==interval for interval in intervals])]
 
         if not relevant_partitions: # if there are no relevant partitions, return the cost of the query
             return total_cost
 
-        relevant_partitions.sort() 
+        # relevant_partitions.sort() 
+        unique_relevant_columns = {}
+        for partition in relevant_partitions:
+            if partition.column not in unique_relevant_columns:
+                unique_relevant_columns[partition.column] = [partition]
+            else:
+                unique_relevant_columns[partition.column].append(partition)
 
-        percentiles = self._request_cache_percentiles(relevant_partitions[0].column)
-        percentiles = [p[0] for p in percentiles]
+        for column in unique_relevant_columns:
+            percentiles = self._request_cache_percentiles(column)
+            percentiles = [p[0] for p in percentiles]
 
-        if not percentiles:
-            return total_cost
+            if not percentiles:
+                return total_cost
 
-        if relevant_partitions[0].column.is_date():
-            return self.estimate_costs_date(relevant_partitions[0], total_cost, intervals)
+            partitions = unique_relevant_columns[column]
 
-        # assuming a simple query for now
-        maximum_percentile_bound = 0
-        if op == "=":
-            for partition in relevant_partitions:
-                if second <= partition.upper_bound_value(percentiles):
-                    return total_cost*(partition.upper_bound - maximum_percentile_bound)
-                if partition.upper_bound > maximum_percentile_bound:
-                    maximum_percentile_bound = partition.upper_bound
-            return total_cost*(1-maximum_percentile_bound)
-        elif op == "<":
-            for partition in relevant_partitions:
-                upper_bound_value = partition.upper_bound_value(percentiles)
-                if upper_bound_value > second:
-                    return total_cost*partition.upper_bound
-            return total_cost*(len(relevant_partitions)+1)
+            if column.is_date():
+                return self.estimate_costs_date(unique_relevant_columns[column][0], total_cost, intervals[column.name])
+            else:
+                maximum_percentile_bound = 1
+                minimum_percentile_bound = 0
+                interval_value_min = None
+                interval_value_max = None
+
+                interval = intervals[column.name]
+                if column.is_numeric():
+                    if interval[0] is not None:
+                        interval_value_min = decimal.Decimal(interval[0])
+                    if interval[1] is not None:
+                        interval_value_max = decimal.Decimal(interval[1])
+                else:
+                    if interval[0] is not None:
+                        interval_value_min = interval[0]
+                    if interval[1] is not None:
+                        interval_value_max = interval[1]
+
+                total_partitions = 1
+                for partition in partitions:
+
+                    value = partition.upper_bound_value(percentiles)
+                    
+                    if interval_value_min is None:
+                        total_partitions = 0
+                        # < or <=
+                        if interval_value_max <= value:
+                            maximum_percentile_bound = partition.upper_bound
+                            break
+                        else:
+                            total_partitions += 1
+                    elif interval_value_max is None:
+                        # > or >=
+                        if interval_value_min <= value:
+                            minimum_percentile_bound = partition.upper_bound
+                        else:
+                            total_partitions = len(partitions)-partitions.index(partition)
+                            break
+                    else:
+                        if interval_value_min <= value and interval_value_max <= value:
+                            maximum_percentile_bound = partition.upper_bound
+                            break
+                        else:
+                            minimum_percentile_bound = partition.upper_bound
+                return total_cost*(maximum_percentile_bound-minimum_percentile_bound)*total_partitions
+                # elif op == "<":
+                #     for partition in partitions:
+                #         upper_bound_value = partition.upper_bound_value(percentiles)
+                #         if upper_bound_value > second:
+                #             return total_cost*partition.upper_bound
+                #     return total_cost*(len(partitions)+1)
 
     def get_interval(self, expression, interval):
         op = expression[1]
@@ -249,7 +293,7 @@ class CostEvaluation:
                 interval[e2] = i2
         else:
             (e,i) = self._interval(expression)
-            interval[e]=i
+            interval[e.lower()]=i
 
         return interval
             
@@ -267,8 +311,7 @@ class CostEvaluation:
         else:
             raise NotImplementedError(f"Operator not supported - {op}")
 
-    def estimate_costs_date(self, partition, total_cost, intervals):
-        (column, interval), *_ = intervals.items()
+    def estimate_costs_date(self, partition, total_cost, interval):
         (minimum, maximum) = interval
         minimum = datetime.datetime.strptime(minimum, "%Y-%m-%d")
         maximum = datetime.datetime.strptime(maximum, "%Y-%m-%d")
@@ -278,7 +321,7 @@ class CostEvaluation:
             if difference.days == 0:
                 return total_cost/30
             else:
-                return total_cost*difference.days
+                return total_cost*difference.days/10
         elif partition.partition_rate == "weekly":
             monday1 = minimum - datetime.timedelta(days=minimum.weekday())
             monday2 = maximum - datetime.timedelta(days=maximum.weekday())
@@ -286,13 +329,13 @@ class CostEvaluation:
             if difference == 0:
                 return total_cost/15
             else:
-                return total_cost*difference
+                return total_cost*difference/7
         elif partition.partition_rate == "monthly":
             difference = maximum.month - minimum.month
             if difference == 0:
                 return total_cost/5
             else:
-                return total_cost*difference
+                return total_cost*difference/4
         elif partition.partition_rate == "yearly":
             difference = maximum.year - minimum.year
             if difference == 0:

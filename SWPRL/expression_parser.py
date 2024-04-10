@@ -1,4 +1,5 @@
 import pyparsing as pp
+import logging
 
 from pyparsing import (
     Word,
@@ -41,7 +42,7 @@ class ExpressionParser:
         binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True).setName("binop")
         realNum = ppc.real().setName("real number")
         intNum = ppc.signed_integer()
-        types = oneOf("bpchar text date timestamp interval")
+        types = oneOf("bpchar text date timestamp interval numeric")
         delimitor = oneOf("::")
         value = quotedString + delimitor.suppress() + types.suppress()
 
