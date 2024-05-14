@@ -109,7 +109,6 @@ class DBEnvV2(gym.Env):
             f"Evaluated Workload ({self.environment_type}): {self.current_workload}\n    "
             f"Initial cost: {self.initial_costs:,.2f}, now: {self.current_costs:,.2f} "
             f"({episode_performance['achieved_cost']:.2f}). Reward: {self.reward_calculator.accumulated_reward}.\n    "
-            f"There are {len(self.current_partitions)} partitions:\n    "
         )
         logging.warning(output)
 

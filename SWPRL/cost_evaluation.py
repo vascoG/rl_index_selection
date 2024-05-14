@@ -1,4 +1,5 @@
 import datetime
+import calendar
 import logging
 import decimal
 
@@ -198,7 +199,7 @@ class CostEvaluation:
 
         intervals = self._request_cache_intervals(query_filter)
     
-        relevant_partitions = [x for x in partitions if any([x.column.name==interval for interval in intervals])]
+        relevant_partitions = [x for x in partitions if any([x.column and x.column.name==interval for interval in intervals])]
 
         if not relevant_partitions: # if there are no relevant partitions, return the cost of the query
             return total_cost
@@ -243,7 +244,8 @@ class CostEvaluation:
 
                 total_partitions = 1
                 for partition in partitions:
-
+                    if partition.no_more_partitions:
+                        continue
                     value = partition.upper_bound_value(percentiles)
                     
                     if interval_value_min is None:
@@ -266,13 +268,9 @@ class CostEvaluation:
                             break
                         else:
                             minimum_percentile_bound = partition.upper_bound
+                if total_partitions == 9:
+                    return total_cost*total_partitions
                 return total_cost*(maximum_percentile_bound-minimum_percentile_bound)*total_partitions
-                # elif op == "<":
-                #     for partition in partitions:
-                #         upper_bound_value = partition.upper_bound_value(percentiles)
-                #         if upper_bound_value > second:
-                #             return total_cost*partition.upper_bound
-                #     return total_cost*(len(partitions)+1)
 
     def get_interval(self, expression, interval):
         op = expression[1]
@@ -313,36 +311,42 @@ class CostEvaluation:
             raise NotImplementedError(f"Operator not supported - {op}")
 
     def estimate_costs_date(self, partition, total_cost, interval):
+        if partition.no_more_partitions:
+            return total_cost
         (minimum, maximum) = interval
         minimum = datetime.datetime.strptime(minimum, "%Y-%m-%d")
         maximum = datetime.datetime.strptime(maximum, "%Y-%m-%d")
+        difference_original = maximum - minimum
+        difference_original_days = difference_original.days+1
 
         if partition.partition_rate == "daily":
-            difference = (maximum - minimum)
-            if difference.days == 0:
-                return total_cost/30
+            if difference_original_days == 0:
+                return total_cost/60
             else:
-                return total_cost*difference.days/30
+                return total_cost*(1+difference_original_days)/60
         elif partition.partition_rate == "weekly":
             monday1 = minimum - datetime.timedelta(days=minimum.weekday())
             monday2 = maximum - datetime.timedelta(days=maximum.weekday())
             difference = (monday2 - monday1).days / 7
             if difference == 0:
-                return total_cost/10
+                ratio = difference_original_days/7
+                return total_cost/20/ratio
             else:
-                return total_cost*difference/10
+                return total_cost*(1+difference)/20
         elif partition.partition_rate == "monthly":
             difference = maximum.month - minimum.month
             if difference == 0:
-                return total_cost/5
+                ratio = difference_original_days/calendar.monthrange(minimum.year, minimum.month)[1]
+                return total_cost/15/ratio
             else:
-                return total_cost*difference/5
+                return total_cost*(1+difference)/15
         elif partition.partition_rate == "yearly":
             difference = maximum.year - minimum.year
             if difference == 0:
-                return total_cost/2
+                ratio = difference_original_days/365
+                return total_cost/4/ratio
             else:
-                return total_cost*difference/2
+                return total_cost*(1+difference)/4
 
     def sanitize(self, value):
         value = value.split("::")[0]

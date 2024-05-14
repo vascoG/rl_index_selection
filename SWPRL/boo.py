@@ -4,7 +4,7 @@ from string import digits
 
 class BagOfOperators(object):
     def __init__(self):
-        self.replacings = [(" ", ""), ("(", ""), (")", ""), ("[", ""), ("]", ""), ("::text", "")]
+        self.replacings = [(" ", ""), ("(", ""), (")", ""), ("[", ""), ("]", ""), ("::text", ""), ("::bpchar", ""), ("::date", ""), ("::interval", ""), ("::numeric", ""), ("::timestamp", "")]
         self.remove_digits = str.maketrans("", "", digits)
         self.INTERESTING_OPERATORS = [
             "Seq Scan",
@@ -45,9 +45,9 @@ class BagOfOperators(object):
         for replacee, replacement in self.replacings:
             value = value.replace(replacee, replacement)
 
-        value = re.sub('".*?"', "", value)
-        value = re.sub("'.*?'", "", value)
-        value = value.translate(self.remove_digits)
+        # value = re.sub('".*?"', "", value)
+        # value = re.sub("'.*?'", "", value)
+        # value = value.translate(self.remove_digits)
 
         return value
 

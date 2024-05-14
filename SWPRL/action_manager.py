@@ -122,7 +122,7 @@ class PartitionActionManager(ActionManager):
             if column.is_date() and column == last_column:
                 self.valid_actions[partition_idx] = self.FORBIDDEN_ACTION
                 self._remaining_valid_actions.remove(partition_idx)
-            if table == last_table and column != last_column:
+            elif table == last_table and (column != last_column or last_partition.no_more_partitions) and not partition.no_more_partitions:
                 self.valid_actions[partition_idx] = self.FORBIDDEN_ACTION
                 self._remaining_valid_actions.remove(partition_idx)
 

@@ -1,5 +1,5 @@
 {
-  "id": "Partition_Vasco_Kevel_Test_Experiment_Factor_1_test",
+  "id": "TPC-E first test",
   "description": "Partition Just a Kevel Test Experiment from Vasco",
   "gym_version": 2,
   "timesteps": 20000,
@@ -7,19 +7,19 @@
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,
   "action_manager": "PartitionActionManager",
-  "observation_manager": "PartitionPlanEmbeddingObservationManagerWithCost",
-  "reward_calculator": "AbsoluteDifferenceToPreviousReward",
+  "observation_manager": "PartitionPlanEmbeddingObservationManager",
+  "reward_calculator": "RelativeDifferenceToPreviousReward",
   "max_steps_per_episode": 200,
-  "validation_frequency": 0,
-  "result_path": "experiment_results",
+  "validation_frequency": 1000,
+  "result_path": "final_experiment_results",
   "workload_embedder": {
     "type": "PlanEmbedderLSIBOW",
-    "representation_size": 2
+    "representation_size": 6
   },
   "rl_algorithm": {
     "algorithm": "PPO2",
     "stable_baselines_version": 2,
-    "gamma": 0.5,
+    "gamma": 0.99,
     "policy": "MlpPolicy",
     "model_architecture": {
       "net_arch": [
@@ -34,9 +34,8 @@
     }
   },
   "workload": {
-    "benchmark": "Kevel",
+    "benchmark": "TPCE",
     "scale_factor": 1,
-    "size": 19,
     "varying_frequencies": false,
     "training_instances": 5000,
     "validation_testing": {

@@ -50,8 +50,8 @@ class RelativeDifferenceToPreviousReward(RewardCalculator):
 
     def _calculate_reward(self, current_cost, previous_cost, initial_cost):
         reward = (previous_cost - current_cost) / initial_cost
-        if reward == 0:
-            return -1
+        # if reward == 0:
+        #     return -1
 
         return reward
 

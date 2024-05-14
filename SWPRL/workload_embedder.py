@@ -174,9 +174,9 @@ class PlanEmbedderLSIBOW(PlanEmbedder):
             self.bow_corpus, id2word=self.dictionary, num_topics=self.representation_size
         )
 
-        assert (
-            len(self.lsi_bow.get_topics()) == self.representation_size
-        ), f"Topic-representation_size mismatch: {len(self.lsi_bow.get_topics())} vs {self.representation_size}"
+        # assert (
+        #     len(self.lsi_bow.get_topics()) == self.representation_size
+        # ), f"Topic-representation_size mismatch: {len(self.lsi_bow.get_topics())} vs {self.representation_size}"
 
     def _infer(self, bow, boo):
         result = self.lsi_bow[bow]

@@ -99,6 +99,7 @@ def all_partitions_from_columns(columns):
             else:
                 for upper_bound in range(1,10):
                     columns.append(Partition(column, upper_bound/10))
+            columns.append(Partition(column, no_more_partitions=True))
             tables.append(columns)
         partitions.append(tables)
     
@@ -136,3 +137,47 @@ def union_intervals(interval1, interval2):
         maximum = max(interval1[1], interval2[1])
 
     return (minimum, maximum)
+
+
+def output_partitions(partitions, database_name):
+    connector = PostgresDatabaseConnector(database_name, autocommit=True)
+    cost_evaluation = CostEvaluation(connector)
+    print("\n------------------------------------\n\nRecommendations:")
+    partitions_by_table = {}
+    for p in partitions:
+        (partition,reward) = p
+        # if reward < 0:
+        #     continue
+        if partition.table_name not in partitions_by_table:
+            partitions_by_table[partition.table_name] = [(partition, reward)]
+        else:
+            partitions_by_table[partition.table_name].append((partition, reward))
+        
+    for table in partitions_by_table:
+        print(f"\nPartitions on the Table \"{table}\":")
+        minimum = 0
+        maximum = 1
+        partitions_by_table[table].sort()
+        recommended_partitions = partitions_by_table[table]
+        if not recommended_partitions[0][0].column.is_date():
+            percentiles = cost_evaluation._request_cache_percentiles(recommended_partitions[0][0].column)
+            percentiles = [p[0] for p in percentiles]
+        for p in recommended_partitions:
+            (partition,reward) = p
+            if partition.no_more_partitions:
+                continue
+            if partition.column.is_date():
+                print(f"Partition on Column \"{partition.column.name}\" at a {partition.partition_rate} rate - {reward}")
+            else:
+                if minimum == 0:
+                    print(f"Partition on Column \"{partition.column.name}\" with values lower than {partition.upper_bound_value(percentiles)} - {reward}")
+                    minimum = partition.upper_bound
+                else:
+                    if recommended_partitions.index(p) == len(recommended_partitions)-2:
+                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[int(10*minimum-1)]} and {partition.upper_bound_value(percentiles)} - {reward}")
+                        print(f"Partition on Column \"{partition.column.name}\" with values higher than {partition.upper_bound_value(percentiles)} - {reward}")
+                    else:   
+                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[int(10*minimum-1)]} and {partition.upper_bound_value(percentiles)} - {reward}")
+                        minimum = partition.upper_bound
+
+

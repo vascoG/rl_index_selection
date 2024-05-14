@@ -4,12 +4,13 @@ from index_selection_evaluation.selection.workload import Column
 
 @total_ordering
 class Partition:
-    def __init__(self, column, value=None):
+    def __init__(self, column, value=None, no_more_partitions=False):
         if not isinstance(column, Column):
             raise ValueError("Partition needs at least and at most 1 column (be of instance Column)")
         self.column = column
         self.table_name = column.table.name
         self.invalid = False
+        self.no_more_partitions = no_more_partitions
         self.hypopg_name = None
         if column.is_date():
             self.partition_rate = value
@@ -30,10 +31,14 @@ class Partition:
         else:
             if self.column.is_date():
                 return self.partition_rate < other.partition_rate
-            else:
+            elif not self.no_more_partitions and not other.no_more_partitions:
                 return self.upper_bound < other.upper_bound
+            else:
+                return other.no_more_partitions
 
     def __repr__(self):
+        if self.no_more_partitions:
+            return f"No more partitions on Column {self.column.name}"
         if self.column.is_date():
             return f"P({self.column.table.name}.{self.column.name}) - {self.partition_rate}"
         else:

@@ -28,6 +28,7 @@ class WorkloadGenerator(object):
             "TPCDS",
             "JOB",
             "Kevel",
+            "TPCE",
         ], f"Benchmark '{config['benchmark']}' is currently not supported."
         # TODO: Change benchmarks later
 
@@ -163,13 +164,13 @@ class WorkloadGenerator(object):
             return 99
         elif self.benchmark == "JOB":
             return 113
-        elif self.benchmark == "Kevel":
+        elif self.benchmark == "Kevel" or self.benchmark == "TPCE":
             return 0 # it will be set later
         else:
             raise ValueError("Unsupported Benchmark type provided, only TPCH, TPCDS, and JOB supported.")
 
     def _retrieve_query_texts(self):
-        if self.benchmark == "Kevel":
+        if self.benchmark == "Kevel" or self.benchmark == "TPCE":
             query_file = open(f"{QUERY_PATH}/{self.benchmark}/{self.benchmark}_queries.txt", "r")
             queries = query_file.readlines()
             finished_queries = self._preprocess_queries(queries)
@@ -261,7 +262,7 @@ class WorkloadGenerator(object):
     def _generate_workloads(
         self, train_instances, validation_instances, test_instances, size, unknown_query_probability=None
     ):
-        if self.benchmark == "Kevel":
+        if self.benchmark == "Kevel" or self.benchmark == "TPCE":
             self.size = len(self.available_query_classes)
         required_unique_workloads = train_instances + validation_instances + test_instances
 

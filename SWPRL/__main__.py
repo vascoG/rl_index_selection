@@ -4,6 +4,8 @@ import logging
 import pickle
 import sys
 
+
+from . import utils
 import gym_db  # noqa: F401
 from gym_db.common import EnvironmentType
 
@@ -34,27 +36,30 @@ def load_and_run():
     ParallelEnv = SubprocVecEnv if experiment.config["parallel_environments"] > 1 else DummyVecEnv
 
     env = ParallelEnv(
-        [experiment.make_env(env_id, environment_type=EnvironmentType.TESTING) for env_id in range(experiment.config["parallel_environments"])]
+        [experiment.make_env(env_id, environment_type=EnvironmentType.VALIDATION) for env_id in range(experiment.config["parallel_environments"])]
     )
     env = VecNormalize(
-        env, norm_obs=True, norm_reward=True, gamma=experiment.config["rl_algorithm"]["gamma"], training=False
+        env, norm_obs=True, norm_reward=True, gamma=experiment.config["rl_algorithm"]["gamma"], training=True
     )
 
     experiment.model_type = algorithm_class
 
-    model = algorithm_class.load(f"{experiment.experiment_folder_path}/final_model.zip", env=env)
+    model = algorithm_class.load(f"{experiment.experiment_folder_path}/final_model")
 
     all_partitions_flat = [
             subitem for sublist in experiment.all_partitions for item in sublist for subitem in item
         ]
     obs = env.reset()
     done = False
+    state = None
+    partitions = []
     while not done:
-        action_mask = [env.get_attr("valid_actions")[0]]
-        action, _ = model.predict(obs, deterministic=True, action_mask=action_mask)
+        action_mask = env.get_attr("valid_actions")
+        action, state = model.predict(obs, deterministic=True, action_mask=action_mask, state=state)
         obs, reward , done, _ = env.step(action)
-        logging.info(f"Action: {all_partitions_flat[action[0]]} - Reward: {reward}")
+        partitions.append((all_partitions_flat[action[0]], reward[0]))
 
+    utils.output_partitions(partitions, experiment.schema.database_name)
 
     
     # model = experiment.load_model(algorithm_class, training_env)
@@ -183,7 +188,7 @@ if __name__ == "__main__":
         callbacks.append(multi_validation_callback)
 
     experiment.start_learning()
-    experiment.model.learn(
+    model.learn(
         total_timesteps=experiment.config["timesteps"],
         callback=callbacks,
         tb_log_name=experiment.id,

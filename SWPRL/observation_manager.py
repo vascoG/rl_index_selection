@@ -128,3 +128,32 @@ class PartitionPlanEmbeddingObservationManagerWithCost(EmbeddingObservationManag
 
         return observation
 
+class PartitionPlanEmbeddingObservationManager(EmbeddingObservationManager):
+    def __init__(self, number_of_actions, config):
+        super().__init__(number_of_actions, config)
+
+        self.UPDATE_EMBEDDING_PER_OBSERVATION = True
+
+        # This overwrites EmbeddingObservationManager's features
+        self.number_of_features = (
+            self.number_of_actions  # Indicates for each action whether it was taken or not
+            + (
+                self.representation_size * self.workload_size
+            )  # embedding representation for every query in the workload
+            + 1  # The initial workload cost
+            + 1  # The current workload cost
+        )
+
+    def init_episode(self, state_fix_for_episode):
+        super()._init_episode(state_fix_for_episode)
+
+    # This overwrite EmbeddingObservationManager.get_observation() because further features are added
+    def get_observation(self, environment_state):
+        workload_embedding = np.array(self.workload_embedder.get_embeddings(environment_state["plans_per_query"]))
+        observation = np.array(environment_state["action_status"])
+        observation = np.append(observation, workload_embedding)
+        observation = np.append(observation, self.initial_cost)
+        observation = np.append(observation, environment_state["current_cost"])
+
+        return observation
+
