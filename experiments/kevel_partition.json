@@ -11,7 +11,7 @@
   "reward_calculator": "RelativeDifferenceToPreviousReward",
   "max_steps_per_episode": 200,
   "validation_frequency": 1000,
-  "result_path": "experiment_results/final",
+  "result_path": "final_experiment_results",
   "workload_embedder": {
     "type": "PlanEmbedderLSIBOW",
     "representation_size": 6

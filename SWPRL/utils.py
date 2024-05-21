@@ -139,7 +139,7 @@ def union_intervals(interval1, interval2):
     return (minimum, maximum)
 
 
-def output_partitions(partitions, database_name):
+def output_partitions(partitions, database_name, path):
     connector = PostgresDatabaseConnector(database_name, autocommit=True)
     cost_evaluation = CostEvaluation(connector)
     print("\n------------------------------------\n\nRecommendations:")
@@ -152,7 +152,7 @@ def output_partitions(partitions, database_name):
             partitions_by_table[partition.table_name] = [(partition, reward)]
         else:
             partitions_by_table[partition.table_name].append((partition, reward))
-        
+    final_partitions = []    
     for table in partitions_by_table:
         print(f"\nPartitions on the Table \"{table}\":")
         minimum = 0
@@ -162,22 +162,34 @@ def output_partitions(partitions, database_name):
         if not recommended_partitions[0][0].column.is_date():
             percentiles = cost_evaluation._request_cache_percentiles(recommended_partitions[0][0].column)
             percentiles = [p[0] for p in percentiles]
+            len_percentiles = len(percentiles)
         for p in recommended_partitions:
             (partition,reward) = p
-            if partition.no_more_partitions:
+            if partition.no_more_partitions or reward <= 0:
                 continue
+            if not final_partitions[table.name]:
+                final_partitions[table.name] = []
             if partition.column.is_date():
                 print(f"Partition on Column \"{partition.column.name}\" at a {partition.partition_rate} rate - {reward}")
+                final_partitions[table.name].append({'column': partition.column.name, 'partition_rate': partition.partition_rate, 'type': 'date'})
             else:
                 if minimum == 0:
                     print(f"Partition on Column \"{partition.column.name}\" with values lower than {partition.upper_bound_value(percentiles)} - {reward}")
+                    final_partitions[table.name].append({'column': partition.column.name, 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                     minimum = partition.upper_bound
                 else:
                     if recommended_partitions.index(p) == len(recommended_partitions)-2:
-                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[int(10*minimum-1)]} and {partition.upper_bound_value(percentiles)} - {reward}")
+                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[(int(10*minimum-1))%len_percentiles]} and {partition.upper_bound_value(percentiles)} - {reward}")
                         print(f"Partition on Column \"{partition.column.name}\" with values higher than {partition.upper_bound_value(percentiles)} - {reward}")
+                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
+                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                     else:   
-                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[int(10*minimum-1)]} and {partition.upper_bound_value(percentiles)} - {reward}")
+                        print(f"Partition on Column \"{partition.column.name}\" between {percentiles[(int(10*minimum-1))%len_percentiles]} and {partition.upper_bound_value(percentiles)} - {reward}")
+                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                         minimum = partition.upper_bound
+
+        # output final_partitions to a file
+        with open(f"{path}/final_partitions.json", "w") as f:
+            json.dump(final_partitions, f)
 
 

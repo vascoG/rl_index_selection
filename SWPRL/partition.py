@@ -20,7 +20,7 @@ class Partition:
     def upper_bound_value(self, percentiles):
         if self.upper_bound is None:
             return None
-        return percentiles[int(self.upper_bound*10-1)]
+        return percentiles[(int(self.upper_bound*10-1))%len(percentiles)]
 
     # Used to sort partitions
     def __lt__(self, other):

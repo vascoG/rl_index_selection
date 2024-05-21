@@ -292,6 +292,8 @@ class CostEvaluation:
                 interval[e2] = i2
         else:
             (e,i) = self._interval(expression)
+            if (isinstance(e,list)):
+                breakpoint()
             interval[e.lower()]=i
 
         return interval

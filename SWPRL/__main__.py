@@ -59,7 +59,7 @@ def load_and_run():
         obs, reward , done, _ = env.step(action)
         partitions.append((all_partitions_flat[action[0]], reward[0]))
 
-    utils.output_partitions(partitions, experiment.schema.database_name)
+    utils.output_partitions(partitions, experiment.schema.database_name, experiment.experiment_folder_path)
 
     
     # model = experiment.load_model(algorithm_class, training_env)

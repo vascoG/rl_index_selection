@@ -26,7 +26,7 @@ class DBEnvV2(gym.Env):
         self.total_number_of_steps = 0
 
         self.connector = PostgresDatabaseConnector(config["database_name"], autocommit=True)
-        self.connector.drop_indexes()
+#        self.connector.drop_indexes()
         self.cost_evaluation = CostEvaluation(self.connector)
 
         self.globally_partitionable_columns_flat = config["globally_partitionable_columns_flat"]

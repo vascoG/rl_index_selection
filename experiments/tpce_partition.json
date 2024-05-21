@@ -1,8 +1,8 @@
 {
-  "id": "TPC-E first test",
+  "id": "TPC-E second test",
   "description": "Partition Just a Kevel Test Experiment from Vasco",
   "gym_version": 2,
-  "timesteps": 20000,
+  "timesteps": 10000,
   "random_seed": 60,
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,

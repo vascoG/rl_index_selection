@@ -42,15 +42,18 @@ class ExpressionParser:
         binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True).setName("binop")
         realNum = ppc.real().setName("real number")
         intNum = ppc.signed_integer()
-        types = oneOf("bpchar text date timestamp interval numeric")
+        types = oneOf("bpchar text date timestamp interval numeric bigint")
         delimitor = oneOf("::")
         value = quotedString + delimitor.suppress() + types.suppress()
+        left_para = oneOf("(")
+        right_para = oneOf(")")
 
         columnRval = (
             realNum | intNum | value | columnName
         ).setName("column_rvalue")  # need to add support for alg expressions
         whereCondition = Group(
             (columnName + binop + columnRval)
+            | (left_para.suppress() + columnName + right_para.suppress() + delimitor.suppress() + types.suppress() + binop + columnRval)
             | (columnName + IN + Group("(" + delimitedList(columnRval).setName("in_values_list") + ")"))
             | (columnName + IN + Group("(" + selectStmt + ")"))
             | (columnName + IS + (NULL | NOT_NULL))

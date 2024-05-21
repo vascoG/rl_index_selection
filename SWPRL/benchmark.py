@@ -51,7 +51,7 @@ class Benchmark:
         self._set_filenames()
 
     def benchmark(self):
-        self.db_connector.drop_indexes()
+        # self.db_connector.drop_indexes()
 
         logging.info("Benchmark with config: {}".format(self.config))
         # Number of runs can be set to 0 to get estimated workload
@@ -64,10 +64,10 @@ class Benchmark:
             for index in self.indexes:
                 self.what_if.simulate_index(index, store_size=True)
         self._benchmark()
-        if self.number_of_runs > 0:
-            self._drop_indexes()
-        else:
-            self.what_if.drop_all_simulated_indexes()
+        # if self.number_of_runs > 0:
+        #     self._drop_indexes()
+        # else:
+        #     self.what_if.drop_all_simulated_indexes()
 
     def _create_csv_header(self):
         header = [
