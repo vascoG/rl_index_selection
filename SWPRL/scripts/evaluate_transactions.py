@@ -52,8 +52,13 @@ if __name__ == '__main__':
             exec_time_base = measure_transaction_time(DATABASE_NAME_BASE, t)
             exec_time_partitioned = measure_transaction_time(DATABASE_NAME_PARTITIONED, t)
             
-            execution_times_base.append(exec_time_base)
-            execution_times_partitioned.append(exec_time_partitioned)
+            execution_times_base.append(exec_time_base * 1000)
+            execution_times_partitioned.append(exec_time_partitioned * 1000)
+
+    # save the execution times to a file
+    with open('execution_times.txt', 'w') as f:
+        f.write(f"Base DB: {execution_times_base}\n")
+        f.write(f"Partitioned DB: {execution_times_partitioned}\n")
 
     avg_time_base = sum(execution_times_base) / len(execution_times_base) if execution_times_base else float('inf')
     avg_time_partitioned = sum(execution_times_partitioned) / len(execution_times_partitioned) if execution_times_partitioned else float('inf')
@@ -69,7 +74,7 @@ if __name__ == '__main__':
     plt.bar(labels, average_times, color=['blue', 'green'])
 
     plt.xlabel('Database Type')
-    plt.ylabel('Average Execution Time (seconds)')
+    plt.ylabel('Average Execution Time (milliseconds)')
     plt.title('Average Transaction Execution Time Comparison')
 
     # Save the plot to a file
@@ -82,10 +87,10 @@ if __name__ == '__main__':
     labels = ['Base DB', 'Partitioned DB']
 
     plt.figure(figsize=(10, 6))
-    plt.boxplot(data, labels=labels)
+    plt.boxplot(data, 0, '', labels=labels)
 
     plt.xlabel('Database Type')
-    plt.ylabel('Execution Time (seconds)')
+    plt.ylabel('Execution Time (milliseconds)')
     plt.title('Transaction Execution Time Distribution')
 
     # Save the plot to a file
