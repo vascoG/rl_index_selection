@@ -191,11 +191,17 @@ class CostEvaluation:
         if "Plans" in query_plan: #if there are subplans, sum all their costs
             return sum([self.estimate_cost(plan, partitions) for plan in query_plan["Plans"]])
 
-        
-        if "Filter" not in  query_plan: # if there is no filter, it needs to scan the whole table
-            return total_cost
+        found = False
+        if "Filter"  in  query_plan: # if there is no filter, it needs to scan the whole table
+            found = True
+            query_filter = query_plan["Filter"]
 
-        query_filter = query_plan["Filter"]
+        if not found and "Index Cond" in query_plan and query_plan["Node Type"] not in ("Index Scan","Index Only Scan") : # if there is no filter
+            found = True
+            query_filter = query_plan["Index Cond"]
+        
+        if not found:
+            return total_cost
 
         intervals = self._request_cache_intervals(query_filter)
     
@@ -233,7 +239,10 @@ class CostEvaluation:
                 interval = intervals[column.name]
                 if column.is_numeric():
                     if interval[0] is not None:
-                        interval_value_min = decimal.Decimal(interval[0])
+                        try:
+                            interval_value_min = decimal.Decimal(interval[0])
+                        except:
+                            breakpoint()
                     if interval[1] is not None:
                         interval_value_max = decimal.Decimal(interval[1])
                 else:

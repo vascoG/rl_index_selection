@@ -49,7 +49,7 @@ class ExpressionParser:
         right_para = oneOf(")")
 
         columnRval = (
-            realNum | intNum | value | columnName
+            realNum | intNum | value | columnName | left_para.suppress() + columnName + right_para.suppress() + delimitor.suppress() + types.suppress()
         ).setName("column_rvalue")  # need to add support for alg expressions
         whereCondition = Group(
             (columnName + binop + columnRval)
@@ -88,4 +88,9 @@ class ExpressionParser:
         self.parser.ignore(SqlComment)
 
     def parse(self, expression):
-        return self.parser.parse_string(expression, parse_all=True)
+        try:
+            return self.parser.parseString(expression, parseAll=True)
+        except pp.ParseException as e:
+            logging.error(f"Error parsing expression: {e} - {expression}")
+            breakpoint()
+            return None

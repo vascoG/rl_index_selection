@@ -57,7 +57,8 @@ def load_and_run():
         action_mask = env.get_attr("valid_actions")
         action, state = model.predict(obs, deterministic=True, action_mask=action_mask, state=state)
         obs, reward , done, _ = env.step(action)
-        partitions.append((all_partitions_flat[action[0]], reward[0]))
+        if not all_partitions_flat[action[0]].no_more_partitions:
+            partitions.append((all_partitions_flat[action[0]], reward[0]))
 
     utils.output_partitions(partitions, experiment.schema.database_name, experiment.experiment_folder_path)
 

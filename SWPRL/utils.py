@@ -1,5 +1,7 @@
 import itertools
 import random
+import json
+from decimal import Decimal
 
 from SWPRL.cost_evaluation import CostEvaluation
 from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
@@ -152,7 +154,7 @@ def output_partitions(partitions, database_name, path):
             partitions_by_table[partition.table_name] = [(partition, reward)]
         else:
             partitions_by_table[partition.table_name].append((partition, reward))
-    final_partitions = []    
+    final_partitions = {}    
     for table in partitions_by_table:
         print(f"\nPartitions on the Table \"{table}\":")
         minimum = 0
@@ -165,31 +167,41 @@ def output_partitions(partitions, database_name, path):
             len_percentiles = len(percentiles)
         for p in recommended_partitions:
             (partition,reward) = p
-            if partition.no_more_partitions or reward <= 0:
+            if partition.no_more_partitions:
                 continue
-            if not final_partitions[table.name]:
-                final_partitions[table.name] = []
+            if table not in final_partitions:
+                final_partitions[table] = []
             if partition.column.is_date():
                 print(f"Partition on Column \"{partition.column.name}\" at a {partition.partition_rate} rate - {reward}")
-                final_partitions[table.name].append({'column': partition.column.name, 'partition_rate': partition.partition_rate, 'type': 'date'})
+                final_partitions[table].append({'column': partition.column.name, 'partition_rate': partition.partition_rate, 'type': 'date'})
             else:
                 if minimum == 0:
                     print(f"Partition on Column \"{partition.column.name}\" with values lower than {partition.upper_bound_value(percentiles)} - {reward}")
-                    final_partitions[table.name].append({'column': partition.column.name, 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
+                    final_partitions[table].append({'column': partition.column.name, 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                     minimum = partition.upper_bound
+                    if recommended_partitions.index(p) == len(recommended_partitions)-1:
+                        print(f"Partition on Column \"{partition.column.name}\" with values higher than {partition.upper_bound_value(percentiles)} - {reward}")
+                        final_partitions[table].append({'column': partition.column.name, 'lower_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                 else:
-                    if recommended_partitions.index(p) == len(recommended_partitions)-2:
+                    if recommended_partitions.index(p) == len(recommended_partitions)-1:
                         print(f"Partition on Column \"{partition.column.name}\" between {percentiles[(int(10*minimum-1))%len_percentiles]} and {partition.upper_bound_value(percentiles)} - {reward}")
                         print(f"Partition on Column \"{partition.column.name}\" with values higher than {partition.upper_bound_value(percentiles)} - {reward}")
-                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
-                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
+                        final_partitions[table].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
+                        final_partitions[table].append({'column': partition.column.name, 'lower_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                     else:   
                         print(f"Partition on Column \"{partition.column.name}\" between {percentiles[(int(10*minimum-1))%len_percentiles]} and {partition.upper_bound_value(percentiles)} - {reward}")
-                        final_partitions[table.name].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
+                        final_partitions[table].append({'column': partition.column.name, 'lower_bound': percentiles[(int(10*minimum-1))%len_percentiles], 'upper_bound': partition.upper_bound_value(percentiles), 'type': 'range'})
                         minimum = partition.upper_bound
 
-        # output final_partitions to a file
-        with open(f"{path}/final_partitions.json", "w") as f:
-            json.dump(final_partitions, f)
+    # convert any Decimal to float
+    for table in final_partitions:
+        for partition in final_partitions[table]:
+            for key in partition:
+                if isinstance(partition[key], Decimal):
+                    partition[key] = float(partition[key])
+
+    # output final_partitions to a file
+    with open(f"{path}/final_partitions_all_rewards.json", "w") as f:
+        json.dump(final_partitions, f)
 
 
