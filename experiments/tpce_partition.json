@@ -2,7 +2,7 @@
   "id": "TPC-E fourth test",
   "description": "Partition Just a Kevel Test Experiment from Vasco",
   "gym_version": 2,
-  "timesteps": 4000,
+  "timesteps": 20000,
   "random_seed": 23,
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,

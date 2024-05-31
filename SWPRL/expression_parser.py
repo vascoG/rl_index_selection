@@ -16,6 +16,7 @@ from pyparsing import (
     restOfLine,
     CaselessKeyword,
     ParserElement,
+    ParseResults,
     pyparsing_common as ppc,
 )
 
@@ -26,8 +27,8 @@ class ExpressionParser:
         # define SQL tokens
         selectStmt = Forward()
         whereStmt = Forward()
-        SELECT, FROM, WHERE, AND, OR, IN, IS, NOT, NULL = map(
-            CaselessKeyword, "select from where and or in is not null".split()
+        SELECT, FROM, WHERE, AND, OR, IN, IS, NOT, NULL, ANY = map(
+            CaselessKeyword, "select from where and or in is not null any".split()
         )
         NOT_NULL = NOT + NULL
 
@@ -42,17 +43,20 @@ class ExpressionParser:
         binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True).setName("binop")
         realNum = ppc.real().setName("real number")
         intNum = ppc.signed_integer()
-        types = oneOf("bpchar text date timestamp interval numeric bigint")
+        types = oneOf("bpchar text date timestamp interval numeric bigint text[]")
         delimitor = oneOf("::")
         value = quotedString + delimitor.suppress() + types.suppress()
         left_para = oneOf("(")
         right_para = oneOf(")")
+        left_para_array = oneOf("('{")
+        right_para_array = oneOf("}'")
 
         columnRval = (
             realNum | intNum | value | columnName | left_para.suppress() + columnName + right_para.suppress() + delimitor.suppress() + types.suppress()
         ).setName("column_rvalue")  # need to add support for alg expressions
         whereCondition = Group(
             (columnName + binop + columnRval)
+            | (left_para.suppress() + columnName + right_para.suppress() + delimitor.suppress() + types.suppress() + binop + ANY + (left_para_array.suppress() + delimitedList(columnRval).setName("any_values_list") + right_para_array.suppress() + delimitor.suppress() + types.suppress() + right_para.suppress()))
             | (left_para.suppress() + columnName + right_para.suppress() + delimitor.suppress() + types.suppress() + binop + columnRval)
             | (columnName + IN + Group("(" + delimitedList(columnRval).setName("in_values_list") + ")"))
             | (columnName + IN + Group("(" + selectStmt + ")"))
@@ -78,7 +82,7 @@ class ExpressionParser:
         # ).setName("select_statement")
 
         whereStmt <<= (
-            whereExpression
+            (left_para.suppress() + whereExpression + right_para.suppress()) | whereExpression
         ).setName("where_statement")
 
         self.parser = whereStmt

@@ -102,13 +102,14 @@ class CostEvaluation:
         ), "Cost Evaluation is completed and cannot be reused."
         start_time = datetime.datetime.now()
 
+        filter(lambda x: not x.no_more_partitions, partitions)
         # self._prepare_cost_calculation(partitions, store_size=store_size)
         total_cost = 0
         plans = []
         costs = []
         for query in workload.queries:
             self.cost_requests += 1
-            cost, plan = self._request_cache_plans(query, partitions)
+            cost1, plan = self._request_cache_plans(query, partitions)
             cost = self.estimate_cost(plan, partitions)
             total_cost += cost
             plans.append(plan)
@@ -187,16 +188,18 @@ class CostEvaluation:
 
         if not partitions or len(partitions) == 0: # if there are no partitions, return the cost of the query
             return total_cost
-        
+
         if "Plans" in query_plan: #if there are subplans, sum all their costs
-            return sum([self.estimate_cost(plan, partitions) for plan in query_plan["Plans"]])
+            sum_cost= sum([plan["Total Cost"] for plan in query_plan["Plans"]])
+            additional_cost = total_cost - sum_cost
+            return sum([self.estimate_cost(plan, partitions) for plan in query_plan["Plans"]]) + additional_cost
 
         found = False
         if "Filter"  in  query_plan: # if there is no filter, it needs to scan the whole table
             found = True
             query_filter = query_plan["Filter"]
 
-        if not found and "Index Cond" in query_plan and query_plan["Node Type"] not in ("Index Scan","Index Only Scan") : # if there is no filter
+        if not found and "Index Cond" in query_plan and query_plan["Relation Name"] not in ("orders_timeline") : # if there is no index
             found = True
             query_filter = query_plan["Index Cond"]
         
@@ -272,11 +275,14 @@ class CostEvaluation:
                             total_partitions = len(partitions)-partitions.index(partition)
                             break
                     else:
-                        if interval_value_min <= value and interval_value_max <= value:
-                            maximum_percentile_bound = partition.upper_bound
-                            break
-                        else:
-                            minimum_percentile_bound = partition.upper_bound
+                        try:
+                            if interval_value_min <= value and interval_value_max <= value:
+                                maximum_percentile_bound = partition.upper_bound
+                                break
+                            else:
+                                minimum_percentile_bound = partition.upper_bound
+                        except:
+                            breakpoint()
                 if total_partitions == 9:
                     return total_cost*total_partitions
                 return total_cost*(maximum_percentile_bound-minimum_percentile_bound)*total_partitions
@@ -306,6 +312,17 @@ class CostEvaluation:
             interval[e.lower()]=i
 
         return interval
+
+    def get_interval_any(self, expression):
+        e = expression[0]
+        expressions = expression[3:]
+        expressions.sort()
+
+        intervals = {}
+        intervals[e.lower()] = (f"'{expressions[0]}'", f"'{expressions[-1]}'")
+        return intervals
+
+
             
     def _interval(self, expression):
         op = expression[1]
@@ -379,7 +396,10 @@ class CostEvaluation:
             return self.cache_intervals[query_filter]
         else:
             parsed_expression = self.expression_parser.parse(query_filter)[0]
-            intervals = self.get_interval(parsed_expression.asList(), {})
+            if parsed_expression[2] == "any":
+                intervals = self.get_interval_any(parsed_expression)
+            else:
+                intervals = self.get_interval(parsed_expression.asList(), {})
             self.cache_intervals[query_filter] = intervals
             return intervals
 

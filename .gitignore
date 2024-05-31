@@ -144,3 +144,7 @@ imdb_data
 # huge files
 SWPRL/tpc-e-tool/flat_out
 SWPRL/tpc-e-tool/flat_in
+
+*:Zone.Identifier
+query_files/TPCE/
+*.csv

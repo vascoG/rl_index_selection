@@ -1,9 +1,9 @@
 {
-  "id": "New Observation class and estimation cost fix",
+  "id": "Kevel first test",
   "description": "Partition Just a Kevel Test Experiment from Vasco",
   "gym_version": 2,
   "timesteps": 20000,
-  "random_seed": 60,
+  "random_seed": 23,
   "parallel_environments": 1,
   "pickle_cost_estimation_caches": false,
   "action_manager": "PartitionActionManager",
@@ -19,7 +19,7 @@
   "rl_algorithm": {
     "algorithm": "PPO2",
     "stable_baselines_version": 2,
-    "gamma": 0.99,
+    "gamma": 0.5,
     "policy": "MlpPolicy",
     "model_architecture": {
       "net_arch": [

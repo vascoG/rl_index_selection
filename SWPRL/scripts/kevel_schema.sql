@@ -6,8 +6,8 @@ CREATE TABLE order_storage.orders_timeline
         PRIMARY KEY,
     order_id  varchar NOT NULL,
     timestamp bigint  NOT NULL,
-    source    jsonb   NOT NULL,
-    "order"   jsonb   NOT NULL
+    source    varchar   NOT NULL,
+    "order"   varchar   NOT NULL
 );
 
 CREATE INDEX orders_timeline__order_id__idx

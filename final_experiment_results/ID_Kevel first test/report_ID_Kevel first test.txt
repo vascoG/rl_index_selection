@@ -1,0 +1,62 @@
+##### Report for Experiment with ID: Kevel first test #####
+Description: Partition Just a Kevel Test Experiment from Vasco
+
+Start:                         2024-05-28 17:15:37.667971
+End:                           2024-05-28 17:31:39.068806
+Duration:                      0:16:01.400835
+
+Start Training:                2024-05-28 17:15:58.131639
+End Training:                  2024-05-28 17:31:39.048992
+Duration Training:             0:15:40.917353
+Moving Average model at step:  13000
+Mean reward model at step:     4000
+Git Hash:                      b'97c1d09da9337c980b1bc054eafa2d35c06f47f5\n'
+Number of features:            212
+Number of actions:             30
+
+Unknown query probability: 0.0:
+    Final mean performance test:
+        Final model:               72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Moving Average model:      72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Moving Average 3 model:    72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Best mean reward model:    72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+
+
+    Final mean performance validation:
+        Final model:               72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Moving Average model:      72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Moving Average 3 model:    72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+        Best mean reward model:    72.90 ([72.9, 72.9, 72.9, 72.9, 72.9])
+
+
+
+Overall Test:
+        Final model:               72.90
+        Moving Average model:      72.90
+        Moving Average 3 model:    72.90
+        Best mean reward model:    72.90
+        Extend:                    nan
+        DB2Adv:                    nan
+
+Overall Validation:
+        Final model:               72.90
+        Moving Average model:      72.90
+        Moving Average 3 model:    72.90
+        Best mean reward model:    72.90
+        Extend:                    nan
+        DB2Adv:                    nan
+
+
+Evaluated episodes:            2762
+Total steps taken:             19961
+CostEval cache hit ratio:      85.33 (581880 of 681930)
+Cost eval time (% of total):   0:13:16.290567 (84.63%)
+
+
+Used configuration:
+{"id": "Kevel first test", "description": "Partition Just a Kevel Test Experiment from Vasco", "gym_version": 2, "timesteps": 20000, "random_seed": 23, "parallel_environments": 1, "pickle_cost_estimation_caches": false, "action_manager": "PartitionActionManager", "observation_manager": "PartitionPlanEmbeddingObservationManager", "reward_calculator": "RelativeDifferenceToPreviousReward", "max_steps_per_episode": 200, "validation_frequency": 1000, "result_path": "final_experiment_results", "workload_embedder": {"type": "PlanEmbedderLSIBOW", "representation_size": 6}, "rl_algorithm": {"algorithm": "PPO2", "stable_baselines_version": 2, "gamma": 0.5, "policy": "MlpPolicy", "model_architecture": {"net_arch": [{"vf": [256, 256], "pi": [256, 256]}]}, "args": {"n_steps": 64}}, "workload": {"benchmark": "Kevel", "scale_factor": 1, "varying_frequencies": false, "training_instances": 5000, "validation_testing": {"number_of_workloads": 5, "unknown_query_probabilities": [0.0]}, "similar_workloads": false, "excluded_query_classes": [], "unknown_queries": 0}, "comparison_algorithms": [], "column_filters": {"TableNumRowsFilter": 10000}}
+
+Evaluated test workloads:
+Evaluated validation workloads:
+
+
