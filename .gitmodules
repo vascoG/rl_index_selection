@@ -6,3 +6,6 @@
 	path = index_selection_evaluation
 	url = git@github.com:hyrise/index_selection_evaluation.git
 	branch = rl_index_selection
+[submodule "SWPRL/dbt5"]
+	path = SWPRL/dbt5
+	url = git@github.com:vascoG/dbt5.git
