@@ -19,7 +19,7 @@
   "rl_algorithm": {
     "algorithm": "PPO2",
     "stable_baselines_version": 2,
-    "gamma": 0.5,
+    "gamma": 0.2,
     "policy": "MlpPolicy",
     "model_architecture": {
       "net_arch": [
@@ -45,9 +45,5 @@
     "similar_workloads": false,
     "excluded_query_classes": [],
     "unknown_queries": 0
-  },
-  "comparison_algorithms": [],
-  "column_filters": {
-    "TableNumRowsFilter": 10000
   }
 }

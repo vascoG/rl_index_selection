@@ -58,3 +58,49 @@ The experiments and models are configured via JSON files. For examples, check th
 - `observation_manager` (`str`): The name of the action manager class to use. For more information consult the dissertation and `observation_manager.py`, which contains all available managers. The dissertation's experiments use the `PartitionPlanEmbeddingObservationManager`.
 - `reward_calculator` (`str`): The name of the reward calculation method to use. For more information consult the dissertation and `reward_calculator.py`, which contains all available reward calculation methods. The dissertation's experiments use the `RelativeDifferenceToPreviousReward`.
 - `max_steps_per_episode` (`int`): The number of maximum admitted index selection steps per episode. This influences the time spent per training episode. The dissertation's experiments use a value of `200`.
+
+## Papers reviewed
+
+The following table shows the tools reviewed during our dissertation's literature review. Additional details can be found on the dissertation document.
+
+
+| **Tool**          | **Optimization Strategy** | **Published** | **Data Source**       |
+|-------------------|---------------------------|---------------|-----------------------|
+| Schism            | Partition                 | 2010          | ACM Digital Library   |
+| Horticulture      | Partition                 | 2012          | ACM Digital Library   |
+| SWORD             | Partition                 | 2013          | ACM Digital Library   |
+| AdaptDB           | Partition                 | 2017          | ACM Digital Library   |
+| Hilprecht et al.  | Partition                 | 2020          | ACM Digital Library   |
+| DTA               | Partition                 | 2011          | ACM Digital Library   |
+| DB2               | Partition                 | 2002          | ACM Digital Library   |
+| Database Cracking | Index                     | 2010          | ACM Digital Library   |
+| Adaptive Merging  | Index                     | 2010          | ACM Digital Library   |
+| Drop              | Index                     | 1993          | IEEE Xplore           |
+| DTA               | Index                     | 2005          | ACM Digital Library   |
+| Extend            | Index                     | 2019          | IEEE Xplore           |
+| DB2               | Index                     | 2000          | IEEE Xplore           |
+| Relaxation        | Index                     | 2005          | ACM Digital Library   |
+| CoPhy             | Index                     | 2011          | ACM Digital Library   |
+| Dexter            | Index                     | -             | Additional References |
+| SWIRL             | Index                     | 2022          | Additional References |
+| Budget-aware      | Index                     | 2022          | ACM Digital Library   |
+| AutoIndex         | Index                     | 2022          | IEEE Xplore           |
+| PGTune            | Configurations            | -             | Additional References |
+| Sullivan et al.   | Configurations            | 2004          | ACM Digital Library   |
+| OpenTuner         | Configurations            | 2014          | ACM Digital Library   |
+| BestConfig        | Configurations            | 2017          | ACM Digital Library   |
+| iTuned            | Configurations            | 2009          | ACM Digital Library   |
+| Ottertune         | Configurations            | 2017          | ACM Digital Library   |
+| ResTune           | Configurations            | 2021          | ACM Digital Library   |
+| CGPTuner          | Configurations            | 2021          | ACM Digital Library   |
+| LlamaTune         | Configurations            | 2022          | ACM Digital Library   |
+| OnlineTune        | Configurations            | 2022          | ACM Digital Library   |
+| LOCAT             | Configurations            | 2022          | ACM Digital Library   |
+| QTune             | Configurations            | 2019          | ACM Digital Library   |
+| CDBTune           | Configurations            | 2021          | ACM Digital Library   |
+| WATuning          | Configurations            | 2021          | ACM Digital Library   |
+| UDO               | Configurations            | 2021          | ACM Digital Library   |
+| DB-BERT           | Configurations            | 2022          | ACM Digital Library   |
+| HUNTER            | Configurations            | 2022          | ACM Digital Library   |
+| BLUTune           | Configurations            | 2022          | ACM Digital Library   |
+| iBTune            | Configurations            | 2019          | ACM Digital Library   |
